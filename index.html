@@ -264,7 +264,7 @@ input[type=range]::-moz-range-thumb{ border:none; }
     <div class="bpm-readout">
       <span class="bpm-num mono" id="bpmNum">120.00</span>
       <span class="bpm-label">BPM</span>
-      <span class="ver-badge">v11</span>
+      <span class="ver-badge">v12</span>
     </div>
     <div class="range-toggle" id="rangeToggle">
       <button class="range-btn" data-range="8">±8%</button>
@@ -1167,7 +1167,19 @@ registerProcessor('cdj-engine', CDJEngine);
   // ---------- PWA: offline cache (alleen actief als de app gehost wordt) ----------
   if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
     window.addEventListener('load', ()=>{
-      navigator.serviceWorker.register('./sw.js').catch(()=>{});
+      navigator.serviceWorker.register('./sw.js').then(reg=>{
+        reg.update();
+        // ook checken op updates telkens de app naar de voorgrond komt
+        document.addEventListener('visibilitychange', ()=>{
+          if(document.visibilityState==='visible') reg.update();
+        });
+      }).catch(()=>{});
+      // nieuwe versie actief geworden -> één keer automatisch herladen
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+        if(reloaded) return; reloaded = true;
+        if(!isPlaying) location.reload(); // nooit midden in een draaiende track
+      });
     });
   }
 
