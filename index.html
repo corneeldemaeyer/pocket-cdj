@@ -235,7 +235,7 @@ input[type=range]::-moz-range-thumb{ border:none; }
       <div class="track-sub" id="trackSub">tik op laden om te starten</div>
     </div>
     <label class="load-btn" for="fileInput">TRACK LADEN</label>
-    <input type="file" id="fileInput" accept="audio/*">
+    <input type="file" id="fileInput" accept="audio/*,.mp3,.m4a,.aac,.wav,.aiff,.flac,.mp4">
   </div>
 
   <div class="wave-wrap">
@@ -427,7 +427,7 @@ input[type=range]::-moz-range-thumb{ border:none; }
     try{
       buffer = await ctx.decodeAudioData(arrayBuf);
     }catch(err){
-      trackSub.textContent = 'kon bestand niet decoderen';
+      trackSub.textContent = 'kon "'+file.name+'" niet decoderen — probeer mp3, m4a of wav (ogg/opus werkt niet op iPhone)';
       return;
     }
     if(objectUrl) URL.revokeObjectURL(objectUrl);
