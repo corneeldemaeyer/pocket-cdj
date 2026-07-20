@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pocket CDJ">
+<meta name="theme-color" content="#0d0f13">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<title>DECK ONE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --black:#0F1013;
+  --panel:#1B1D23;
+  --panel-2:#242630;
+  --panel-3:#2E313D;
+  --line:#3A3D48;
+  --text:#EDEFF3;
+  --text-dim:#8B8E99;
+  --amber:#FF8A3D;
+  --amber-dim:#5A3E24;
+  --teal:#2FE6C2;
+  --teal-dim:#1B4A44;
+  --red:#FF4757;
+  --red-dim:#4A2029;
+  font-size:16px;
+}
+*{box-sizing:border-box;}
+html,body{
+  margin:0; padding:0; background:var(--black); color:var(--text);
+  font-family:'Inter',sans-serif; -webkit-tap-highlight-color:transparent;
+  overscroll-behavior:none; height:100%; width:100%;
+  touch-action:manipulation;
+}
+body{
+  display:flex; justify-content:center;
+  min-height:100vh;
+  background:
+    radial-gradient(ellipse at 50% -10%, #1a1c22 0%, var(--black) 55%);
+}
+.mono{ font-family:'JetBrains Mono',monospace; }
+
+.deck{
+  width:100%; max-width:480px; min-height:100vh;
+  display:flex; flex-direction:column;
+  background:var(--panel);
+  border-left:1px solid var(--line); border-right:1px solid var(--line);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+
+/* ---------- HEADER ---------- */
+.topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px 10px; gap:10px;
+  border-bottom:1px solid var(--line);
+}
+.brand{
+  font-size:11px; letter-spacing:3px; font-weight:800; color:var(--text-dim);
+}
+.brand span{ color:var(--amber); }
+.track-title{
+  font-size:13px; color:var(--text); font-weight:600;
+  max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.track-sub{ font-size:10px; color:var(--text-dim); margin-top:2px; letter-spacing:.5px;}
+.load-btn{
+  background:var(--panel-3); color:var(--text); border:1px solid var(--line);
+  font-family:'Inter',sans-serif; font-weight:700; font-size:11px; letter-spacing:1px;
+  padding:9px 12px; border-radius:6px; cursor:pointer; white-space:nowrap;
+}
+.load-btn:active{ background:var(--amber-dim); border-color:var(--amber); }
+#fileInput{ display:none; }
+
+/* ---------- WAVEFORM ---------- */
+.wave-wrap{
+  position:relative; padding:10px 0 4px; border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,#141519,#181A20);
+}
+#waveCanvas{ display:block; width:100%; height:110px; }
+.playhead-line{
+  position:absolute; top:6px; bottom:22px; left:50%; width:2px;
+  background:var(--amber); box-shadow:0 0 8px var(--amber);
+  transform:translateX(-1px); pointer-events:none;
+}
+.time-row{
+  display:flex; justify-content:space-between; padding:2px 14px 6px;
+  font-size:11px; color:var(--text-dim);
+}
+.time-row .mono{ color:var(--text); }
+.empty-hint{
+  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  font-size:11px; color:var(--text-dim); letter-spacing:.5px; pointer-events:none;
+}
+
+/* ---------- BPM READOUT ---------- */
+.bpm-row{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px 6px;
+}
+.bpm-readout{ display:flex; align-items:baseline; gap:6px; }
+.bpm-num{ font-size:36px; font-weight:700; color:var(--teal); letter-spacing:1px; line-height:1; }
+.bpm-label{ font-size:11px; color:var(--text-dim); letter-spacing:2px; font-weight:600; }
+.range-toggle{ display:flex; gap:4px; }
+.range-btn{
+  background:var(--panel-3); border:1px solid var(--line); color:var(--text-dim);
+  font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700;
+  padding:7px 9px; border-radius:5px; cursor:pointer;
+}
+.range-btn.active{ background:var(--amber-dim); border-color:var(--amber); color:var(--amber); }
+
+/* ---------- JOG ---------- */
+.jog-area{
+  display:flex; align-items:center; justify-content:center; gap:18px;
+  padding:8px 16px 14px;
+}
+.nudge-btn{
+  width:44px; height:96px; border-radius:10px;
+  background:var(--panel-3); border:1px solid var(--line); color:var(--text-dim);
+  font-size:18px; display:flex; align-items:center; justify-content:center;
+  user-select:none; cursor:pointer;
+}
+.nudge-btn:active, .nudge-btn.pressed{ background:var(--teal-dim); border-color:var(--teal); color:var(--teal); }
+
+.jog{
+  position:relative; width:190px; height:190px; border-radius:50%;
+  background:
+    radial-gradient(circle at 50% 42%, #33363f 0%, #23252c 55%, #191a1f 100%);
+  border:1px solid var(--line);
+  box-shadow: inset 0 0 0 8px #14151a, inset 0 0 30px rgba(0,0,0,.6), 0 6px 18px rgba(0,0,0,.5);
+  touch-action:none; cursor:grab;
+}
+.jog-ring{
+  position:absolute; inset:8px; border-radius:50%;
+  border:1px dashed #40434f;
+}
+.jog-marker{
+  position:absolute; top:14px; left:50%; width:3px; height:26px;
+  background:var(--teal); border-radius:2px; transform-origin:50% 81px;
+  box-shadow:0 0 6px var(--teal);
+}
+.jog-center{
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:64px; height:64px; border-radius:50%;
+  background:var(--panel); border:1px solid var(--line);
+  display:flex; align-items:center; justify-content:center;
+  flex-direction:column; pointer-events:none;
+}
+.jog-center .lbl{ font-size:9px; letter-spacing:2px; color:var(--text-dim); font-weight:700; }
+.jog.playing .jog-center{ border-color:var(--amber); }
+.jog.playing .jog-ring{ border-color:var(--amber); opacity:.6; }
+
+/* ---------- TRANSPORT ---------- */
+.transport{
+  display:flex; align-items:center; justify-content:center; gap:12px;
+  padding:6px 16px 18px;
+}
+.tbtn{
+  border:none; border-radius:8px; font-family:'Inter',sans-serif; font-weight:700;
+  font-size:12px; letter-spacing:1px; cursor:pointer; padding:14px 22px;
+  display:flex; align-items:center; gap:8px;
+}
+.tbtn.cue{ background:var(--panel-3); color:var(--text); border:1px solid var(--line); }
+.tbtn.cue:active{ background:var(--red-dim); border-color:var(--red); color:var(--red); }
+.tbtn.play{ background:var(--amber); color:#1a1204; min-width:150px; justify-content:center; }
+.tbtn.play.is-playing{ background:var(--panel-3); color:var(--amber); border:1px solid var(--amber); }
+
+/* ---------- TEMPO ---------- */
+.section{ padding:14px 16px; border-top:1px solid var(--line); }
+.section-head{
+  display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;
+}
+.section-head .t{ font-size:11px; letter-spacing:2px; font-weight:700; color:var(--text-dim); }
+.section-head .v{ font-size:13px; color:var(--teal); }
+.tempo-slider{
+  -webkit-appearance:none; width:100%; height:6px; border-radius:3px;
+  background:linear-gradient(90deg, var(--panel-3), var(--line), var(--panel-3));
+  outline:none;
+}
+.tempo-slider::-webkit-slider-thumb{
+  -webkit-appearance:none; width:26px; height:26px; border-radius:50%;
+  background:var(--amber); border:3px solid #1a1204; cursor:pointer;
+  box-shadow:0 0 8px rgba(255,138,61,.6);
+}
+.tempo-scale{ display:flex; justify-content:space-between; font-size:9px; color:var(--text-dim); margin-top:4px;}
+.tempo-reset{
+  margin-top:8px; width:100%; background:var(--panel-3); border:1px solid var(--line);
+  color:var(--text-dim); font-size:10px; letter-spacing:1px; font-weight:700;
+  padding:7px; border-radius:5px; cursor:pointer;
+}
+
+/* ---------- EQ ---------- */
+.eq-row{ display:flex; justify-content:space-around; align-items:flex-end; padding-top:4px;}
+.eq-band{ display:flex; flex-direction:column; align-items:center; gap:8px; }
+.eq-val{ font-size:11px; color:var(--text-dim); width:44px; text-align:center; }
+/* verticale sliders: iOS Safari kent geen slider-vertical/writing-mode op range,
+   dus we roteren een horizontale slider — werkt overal */
+.eq-slider-wrap{ height:130px; width:36px; display:flex; align-items:center; justify-content:center; }
+.eq-slider{
+  -webkit-appearance:none; appearance:none;
+  width:120px; height:6px; border-radius:3px; background:var(--panel-3); outline:none;
+  transform:rotate(-90deg); transform-origin:center;
+  touch-action:none;
+}
+.eq-slider::-webkit-slider-thumb{
+  -webkit-appearance:none; width:24px; height:14px; border-radius:4px; cursor:pointer;
+}
+.eq-band[data-band="low"] .eq-slider::-webkit-slider-thumb{ background:var(--amber); }
+.eq-band[data-band="mid"] .eq-slider::-webkit-slider-thumb{ background:#d7dae2; }
+.eq-band[data-band="high"] .eq-slider::-webkit-slider-thumb{ background:var(--teal); }
+.eq-label{ font-size:10px; letter-spacing:1.5px; font-weight:700; color:var(--text-dim); }
+
+.master-row{ display:flex; align-items:center; gap:12px; margin-top:16px; }
+.master-row .lbl{ font-size:10px; letter-spacing:1.5px; font-weight:700; color:var(--text-dim); width:52px;}
+.master-slider{ -webkit-appearance:none; flex:1; height:4px; border-radius:2px; background:var(--panel-3); outline:none;}
+.master-slider::-webkit-slider-thumb{ -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:#d7dae2; cursor:pointer;}
+
+.footnote{ padding:14px 16px 26px; font-size:10.5px; line-height:1.5; color:var(--text-dim); }
+.footnote b{ color:var(--text); }
+
+input[type=range]::-moz-range-thumb{ border:none; }
+</style>
+</head>
+<body>
+<div class="deck">
+
+  <div class="topbar">
+    <div>
+      <div class="brand">DECK <span>ONE</span></div>
+      <div class="track-title" id="trackTitle">Geen track geladen</div>
+      <div class="track-sub" id="trackSub">tik op laden om te starten</div>
+    </div>
+    <label class="load-btn" for="fileInput">TRACK LADEN</label>
+    <input type="file" id="fileInput" accept="audio/*">
+  </div>
+
+  <div class="wave-wrap">
+    <canvas id="waveCanvas"></canvas>
+    <div class="playhead-line"></div>
+    <div class="empty-hint" id="emptyHint">laad een audiobestand (ook vanaf USB-opslag)</div>
+  </div>
+  <div class="time-row">
+    <span class="mono" id="curTime">00:00</span>
+    <span id="cueHint">geen cue-punt</span>
+    <span class="mono" id="totTime">00:00</span>
+  </div>
+
+  <div class="bpm-row">
+    <div class="bpm-readout">
+      <span class="bpm-num mono" id="bpmNum">120.00</span>
+      <span class="bpm-label">BPM</span>
+    </div>
+    <div class="range-toggle" id="rangeToggle">
+      <button class="range-btn" data-range="8">±8%</button>
+      <button class="range-btn active" data-range="16">±16%</button>
+      <button class="range-btn" data-range="50">±50%</button>
+    </div>
+  </div>
+
+  <div class="jog-area">
+    <div class="nudge-btn" id="nudgeLeft">−</div>
+    <div class="jog" id="jog">
+      <div class="jog-ring"></div>
+      <div class="jog-marker" id="jogMarker"></div>
+      <div class="jog-center"><div class="lbl">JOG</div></div>
+    </div>
+    <div class="nudge-btn" id="nudgeRight">+</div>
+  </div>
+
+  <div class="transport">
+    <button class="tbtn cue" id="cueBtn">CUE</button>
+    <button class="tbtn play" id="playBtn">▶ PLAY</button>
+  </div>
+
+  <div class="section">
+    <div class="section-head">
+      <span class="t">TEMPO</span>
+      <span style="display:flex;gap:10px;align-items:center;">
+        <button class="range-btn" id="keylockBtn" title="Toonhoogte vasthouden bij tempowijziging">KEYLOCK</button>
+        <span class="v mono" id="tempoVal">+0.0%</span>
+      </span>
+    </div>
+    <input type="range" class="tempo-slider" id="tempoSlider" min="-16" max="16" step="0.1" value="0">
+    <div class="tempo-scale"><span id="scaleMin">-16%</span><span>0</span><span id="scaleMax">+16%</span></div>
+    <button class="tempo-reset" id="tempoReset">RESET NAAR 0%</button>
+  </div>
+
+  <div class="section">
+    <div class="section-head"><span class="t">EQ (3-BAND)</span><span class="v mono" id="eqSummary"></span></div>
+    <div class="eq-row">
+      <div class="eq-band" data-band="low">
+        <div class="eq-val mono" id="lowVal">0 dB</div>
+        <div class="eq-slider-wrap"><input type="range" class="eq-slider" id="lowSlider" min="-24" max="12" step="1" value="0"></div>
+        <div class="eq-label">LOW</div>
+      </div>
+      <div class="eq-band" data-band="mid">
+        <div class="eq-val mono" id="midVal">0 dB</div>
+        <div class="eq-slider-wrap"><input type="range" class="eq-slider" id="midSlider" min="-24" max="12" step="1" value="0"></div>
+        <div class="eq-label">MID</div>
+      </div>
+      <div class="eq-band" data-band="high">
+        <div class="eq-val mono" id="highVal">0 dB</div>
+        <div class="eq-slider-wrap"><input type="range" class="eq-slider" id="highSlider" min="-24" max="12" step="1" value="0"></div>
+        <div class="eq-label">HIGH</div>
+      </div>
+    </div>
+    <div class="master-row">
+      <span class="lbl">MASTER</span>
+      <input type="range" class="master-slider" id="masterSlider" min="0" max="1.3" step="0.01" value="1">
+    </div>
+  </div>
+
+  <div class="footnote">
+    <b>Track-BPM:</b> tik op de BPM-waarde om de basis-BPM van de track handmatig in te stellen (geen auto-detectie in dit prototype) — de tempo-slider rekent daar vanaf. <b>Nudge:</b> draai aan de jog of houd −/+ ingedrukt om tijdelijk te versnellen/vertragen, net als bij een echte CDJ. Audio gaat via de normale uitgang van je telefoon naar de mic-input van je FLX4.
+  </div>
+
+</div>
+
+<script>
+(() => {
+  // ---------- state ----------
+  let ctx = null;
+  let buffer = null;
+  let audioEl = null;       // playback via <audio> voor native keylock (preservesPitch)
+  let mediaAnalyser = null; // meet of de media-engine echt geluid levert
+  let objectUrl = null;
+  let keylock = false;  // standaard uit: buffer-engine is overal betrouwbaar
+  let lowFilter, midFilter, highFilter, masterGain;
+  let isPlaying = false;
+  let startOffset = 0;      // position in buffer (seconds) at that moment
+  let cuePoint = 0;
+  let trackBPM = 120;
+  let baseRatePercent = 0;  // tempo slider value, -range..+range
+  let tempoRange = 16;
+  let nudgeOffset = 0;      // temporary multiplicative bend, decays to 0
+  let peaksMin = null, peaksMax = null, bucketDur = 0.01;
+  let bucketR = null, bucketG = null, bucketB = null; // RGB per bucket (band-energie)
+  let beatOffset = 0;   // tijdstip (s) van de eerste gedetecteerde beat
+  let bpmDetected = false;
+  let jogRotation = 0;
+  let dragging = false;
+  let lastAngle = 0;
+  let wakeLock = null;
+
+  // ---------- dom ----------
+  const $ = id => document.getElementById(id);
+  const fileInput = $('fileInput');
+  const trackTitle = $('trackTitle');
+  const trackSub = $('trackSub');
+  const emptyHint = $('emptyHint');
+  const waveCanvas = $('waveCanvas');
+  const wctx = waveCanvas.getContext('2d');
+  const curTimeEl = $('curTime');
+  const totTimeEl = $('totTime');
+  const cueHint = $('cueHint');
+  const bpmNum = $('bpmNum');
+  const rangeToggle = $('rangeToggle');
+  const jogEl = $('jog');
+  const jogMarker = $('jogMarker');
+  const nudgeLeft = $('nudgeLeft');
+  const nudgeRight = $('nudgeRight');
+  const playBtn = $('playBtn');
+  const cueBtn = $('cueBtn');
+  const tempoSlider = $('tempoSlider');
+  const tempoVal = $('tempoVal');
+  const tempoReset = $('tempoReset');
+  const scaleMin = $('scaleMin');
+  const scaleMax = $('scaleMax');
+  const lowSlider = $('lowSlider');
+  const midSlider = $('midSlider');
+  const highSlider = $('highSlider');
+  const lowVal = $('lowVal');
+  const midVal = $('midVal');
+  const highVal = $('highVal');
+  const masterSlider = $('masterSlider');
+
+  function fmtTime(s){
+    if(!isFinite(s) || s<0) s=0;
+    const m = Math.floor(s/60), sec = Math.floor(s%60);
+    return String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');
+  }
+
+  function ensureCtx(){
+    if(!ctx){
+      ctx = new (window.AudioContext||window.webkitAudioContext)();
+      lowFilter = ctx.createBiquadFilter(); lowFilter.type='lowshelf'; lowFilter.frequency.value=200;
+      midFilter = ctx.createBiquadFilter(); midFilter.type='peaking'; midFilter.frequency.value=1000; midFilter.Q.value=0.9;
+      highFilter = ctx.createBiquadFilter(); highFilter.type='highshelf'; highFilter.frequency.value=4000;
+      masterGain = ctx.createGain(); masterGain.gain.value=1;
+      const limiter = ctx.createDynamicsCompressor();
+      limiter.threshold.value = -1; limiter.knee.value = 0;
+      limiter.ratio.value = 20; limiter.attack.value = 0.002; limiter.release.value = 0.1;
+      lowFilter.connect(midFilter); midFilter.connect(highFilter); highFilter.connect(masterGain);
+      masterGain.connect(limiter); limiter.connect(ctx.destination);
+      audioEl = new Audio();
+      audioEl.preload = 'auto';
+      audioEl.setAttribute('playsinline','');
+      audioEl.playsInline = true;
+      const mediaSrc = ctx.createMediaElementSource(audioEl);
+      mediaAnalyser = ctx.createAnalyser();
+      mediaAnalyser.fftSize = 2048;
+      mediaSrc.connect(mediaAnalyser); mediaAnalyser.connect(lowFilter);
+      applyKeylock();
+      audioEl.addEventListener('ended', ()=>{
+        if(activeEngine!=='media') return;
+        setPlayingUI(false);
+        startOffset = buffer ? buffer.duration : 0;
+      });
+      audioEl.addEventListener('error', ()=>{ if(activeEngine==='media') mediaFailed('audio-element error'); });
+    }
+    if(ctx.state==='suspended') ctx.resume();
+  }
+
+  // ---------- file loading ----------
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    fileInput.value = '';           // zodat hetzelfde bestand opnieuw geladen kan worden
+    if(!file) return;
+    ensureCtx();
+    trackTitle.textContent = file.name;
+    trackSub.textContent = 'decoderen...';
+    const arrayBuf = await file.arrayBuffer();
+    try{
+      buffer = await ctx.decodeAudioData(arrayBuf);
+    }catch(err){
+      trackSub.textContent = 'kon bestand niet decoderen';
+      return;
+    }
+    if(objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(file);
+    audioEl.src = objectUrl;
+    audioEl.load();
+    stopPlayback();
+    startOffset = 0; cuePoint = 0;
+    totTimeEl.textContent = fmtTime(buffer.duration);
+    cueHint.textContent = 'geen cue-punt';
+    trackSub.textContent = 'analyseren...';
+    emptyHint.style.display = 'none';
+    await new Promise(r=>setTimeout(r,30)); // laat UI even ademen
+    analyzeTrack();
+    updateBpmReadout();
+    trackSub.textContent = buffer.duration.toFixed(1)+'s · '+buffer.sampleRate+'Hz · '
+      + (bpmDetected ? trackBPM.toFixed(1)+' BPM (auto)' : 'BPM niet gevonden — tik op BPM');
+    drawWave();
+  });
+
+  function analyzeTrack(){
+    const ch0 = buffer.getChannelData(0);
+    const ch1 = buffer.numberOfChannels>1 ? buffer.getChannelData(1) : null;
+    const sr = buffer.sampleRate;
+    const samplesPerBucket = Math.max(1, Math.round(sr*bucketDur));
+    const bucketCount = Math.ceil(ch0.length/samplesPerBucket);
+    peaksMin = new Float32Array(bucketCount);
+    peaksMax = new Float32Array(bucketCount);
+    bucketR = new Uint8Array(bucketCount);
+    bucketG = new Uint8Array(bucketCount);
+    bucketB = new Uint8Array(bucketCount);
+    const eLowArr = new Float32Array(bucketCount);
+
+    // RBJ biquad-coëfficiënten: lowpass 200 Hz en highpass 2500 Hz
+    function biquadCoefs(f0, type){
+      const w0 = 2*Math.PI*f0/sr, cw = Math.cos(w0), sw = Math.sin(w0);
+      const Q = 0.707, alpha = sw/(2*Q);
+      let b0,b1,b2,a0,a1,a2;
+      if(type==='lp'){ b0=(1-cw)/2; b1=1-cw; b2=(1-cw)/2; }
+      else { b0=(1+cw)/2; b1=-(1+cw); b2=(1+cw)/2; }
+      a0=1+alpha; a1=-2*cw; a2=1-alpha;
+      return { b0:b0/a0, b1:b1/a0, b2:b2/a0, a1:a1/a0, a2:a2/a0 };
+    }
+    const lp = biquadCoefs(200,'lp'), hp = biquadCoefs(2500,'hp');
+    let lx1=0,lx2=0,ly1=0,ly2=0, hx1=0,hx2=0,hy1=0,hy2=0;
+
+    for(let b=0;b<bucketCount;b++){
+      let mn=1, mx=-1, eT=0, eL=0, eH=0;
+      const start=b*samplesPerBucket, end=Math.min(ch0.length, start+samplesPerBucket);
+      for(let i=start;i<end;i++){
+        let v = ch0[i];
+        if(ch1) v = (v+ch1[i])/2;
+        if(v<mn) mn=v;
+        if(v>mx) mx=v;
+        eT += v*v;
+        const yl = lp.b0*v + lp.b1*lx1 + lp.b2*lx2 - lp.a1*ly1 - lp.a2*ly2;
+        lx2=lx1; lx1=v; ly2=ly1; ly1=yl; eL += yl*yl;
+        const yh = hp.b0*v + hp.b1*hx1 + hp.b2*hx2 - hp.a1*hy1 - hp.a2*hy2;
+        hx2=hx1; hx1=v; hy2=hy1; hy1=yh; eH += yh*yh;
+      }
+      peaksMin[b]=mn; peaksMax[b]=mx;
+      const eM = Math.max(0, eT-eL-eH);
+      eLowArr[b] = Math.sqrt(eL);
+      // kleur = mix van laag (blauw), mid (amber), hoog (wit) o.b.v. energieverhouding
+      const sum = eL+eM+eH+1e-12;
+      const wL=eL/sum, wM=eM/sum, wH=eH/sum;
+      bucketR[b] = Math.round(wL*60  + wM*255 + wH*237);
+      bucketG[b] = Math.round(wL*110 + wM*138 + wH*239);
+      bucketB[b] = Math.round(wL*255 + wM*61  + wH*243);
+    }
+
+    detectBPM(eLowArr);
+  }
+
+  function detectBPM(env){
+    bpmDetected = false; beatOffset = 0;
+    // onset-sterkte uit de lage band (100 Hz envelope), max eerste 3 min
+    const N = Math.min(env.length, Math.round(180/bucketDur));
+    if(N < 1500) return; // te kort voor betrouwbare detectie
+    const onset = new Float32Array(N);
+    for(let i=1;i<N;i++) onset[i] = Math.max(0, env[i]-env[i-1]);
+    // autocorrelatie over lags voor 60–180 BPM (1.0s .. 0.333s)
+    const minLag = Math.round(60/180/bucketDur), maxLag = Math.round(60/60/bucketDur);
+    let bestLag = 0, bestScore = -1;
+    for(let lag=minLag; lag<=maxLag; lag++){
+      let s = 0;
+      for(let i=0;i<N-lag*2;i++) s += onset[i]*(onset[i+lag] + 0.5*onset[i+lag*2]);
+      // lichte voorkeur voor "normale" tempo's rond 90–150 BPM
+      const bpm = 60/(lag*bucketDur);
+      const prior = 1 - Math.min(0.25, Math.abs(bpm-120)/240);
+      s *= prior;
+      if(s > bestScore){ bestScore = s; bestLag = lag; }
+    }
+    if(!bestLag) return;
+    // parabolische verfijning rond bestLag
+    function acScore(lag){
+      let s=0; for(let i=0;i<N-lag;i++) s += onset[i]*onset[i+lag]; return s;
+    }
+    const s0=acScore(bestLag-1), s1=acScore(bestLag), s2=acScore(bestLag+1);
+    const denom = (s0 - 2*s1 + s2);
+    const frac = denom !== 0 ? 0.5*(s0-s2)/denom : 0;
+    let refinedLag = bestLag + Math.max(-0.5, Math.min(0.5, frac));
+    // octaafcorrectie: als de halve lag (dubbel tempo) duidelijk mee-correleert
+    // en binnen bereik valt, kies dan het dubbele tempo (bv. 87 -> 174 voor dnb)
+    const halfLag = Math.round(bestLag/2);
+    if(halfLag-1 >= minLag){
+      const halfMax = Math.max(acScore(halfLag-1), acScore(halfLag), acScore(halfLag+1));
+      if(halfMax > 0.55*s1) refinedLag = refinedLag/2;
+    }
+    let bpm = 60/(refinedLag*bucketDur);
+    while(bpm < 70) bpm *= 2;
+    while(bpm > 180) bpm /= 2;
+    // gezamenlijke fijnafstelling van BPM én fase (fractioneel, dus geen grid-drift):
+    // kam-som van onset-energie op alle beatposities, eerste 90s
+    const M = Math.min(N, Math.round(90/bucketDur));
+    function combScore(bpmC, phaseBuckets){
+      const iv = 60/bpmC/bucketDur; // beat-interval in buckets, fractioneel
+      let s = 0;
+      for(let t=phaseBuckets; t<M-1; t+=iv){
+        const i0 = Math.floor(t), f = t-i0;
+        s += onset[i0]*(1-f) + onset[i0+1]*f; // lineaire interpolatie
+      }
+      return s;
+    }
+    let bestB = bpm, bestPh = 0, bestS = -1;
+    for(let c = bpm-0.7; c <= bpm+0.7; c += 0.02){
+      const iv = 60/c/bucketDur;
+      const nPh = 24;
+      for(let p=0; p<nPh; p++){
+        const ph = p/nPh*iv;
+        const s = combScore(c, ph);
+        if(s>bestS){ bestS=s; bestB=c; bestPh=ph; }
+      }
+    }
+    // fase nog verfijnen in stapjes van 5 ms rond het beste punt
+    const ivBest = 60/bestB/bucketDur;
+    for(let ph = Math.max(0,bestPh-ivBest/24); ph <= bestPh+ivBest/24; ph += 0.5){
+      const s = combScore(bestB, ph);
+      if(s>bestS){ bestS=s; bestPh=ph; }
+    }
+    trackBPM = Math.round(bestB*100)/100;
+    beatOffset = (bestPh % ivBest) * bucketDur;
+    bpmDetected = true;
+  }
+
+  // ---------- transport: dubbele engine ----------
+  // 'buffer'  = AudioBufferSourceNode: werkt overal, pitch schuift mee met tempo
+  // 'media'   = <audio>-element met preservesPitch: keylock, maar niet op elk toestel
+  // Keylock UIT -> buffer-engine (betrouwbaar). Keylock AAN -> media-engine,
+  // met automatische terugval naar buffer als die faalt.
+  let source = null;        // actieve BufferSource
+  let startCtxTime = 0;     // ctx.currentTime bij laatste (re)start (buffer-engine)
+  let lastRate = 1;         // rate bij laatste positie-commit (buffer-engine)
+  let activeEngine = 'buffer';
+
+  function currentEffectiveRate(){
+    const pct = baseRatePercent + nudgeOffset*100;
+    return 1 + pct/100;
+  }
+  function currentPosition(){
+    if(!buffer) return 0;
+    if(!isPlaying) return startOffset;
+    if(activeEngine==='media'){
+      if(!audioEl || audioEl.readyState < 1) return startOffset;
+      return audioEl.currentTime;
+    }
+    return startOffset + (ctx.currentTime - startCtxTime) * lastRate;
+  }
+  function applyKeylock(){
+    if(!audioEl) return;
+    audioEl.preservesPitch = keylock;
+    audioEl.webkitPreservesPitch = keylock;
+  }
+  function setPlayingUI(on){
+    isPlaying = on;
+    playBtn.classList.toggle('is-playing', on);
+    playBtn.innerHTML = on ? '\u2759\u2759 PAUSE' : '\u25B6 PLAY';
+    jogEl.classList.toggle('playing', on);
+  }
+  function killSources(){
+    if(source){ source.onended=null; try{source.stop();}catch(e){} source.disconnect(); source=null; }
+    if(audioEl && !audioEl.paused) audioEl.pause();
+  }
+
+  function startBufferEngine(){
+    activeEngine = 'buffer';
+    source = ctx.createBufferSource();
+    source.buffer = buffer;
+    lastRate = currentEffectiveRate();
+    source.playbackRate.value = lastRate;
+    source.connect(lowFilter);
+    source.start(0, startOffset);
+    startCtxTime = ctx.currentTime;
+    const mySource = source;
+    mySource.onended = () => {
+      if(isPlaying && source===mySource){ setPlayingUI(false); startOffset = buffer.duration; }
+    };
+  }
+
+  // iOS-bug: media-element door Web Audio kan geluidloos "spelen" zonder error.
+  // Meet daarom de echte uitvoer; alleen ingrijpen als de track op die plek
+  // volgens de waveform NIET stil hoort te zijn.
+  let silentStrikes = 0;
+  function scheduleSilenceProbe(){
+    silentStrikes = 0;
+    const check = ()=>{
+      if(activeEngine!=='media' || !isPlaying || !mediaAnalyser) return;
+      const pos = audioEl.currentTime;
+      const bIdx = Math.min(peaksMax ? peaksMax.length-1 : 0, Math.floor(pos/bucketDur));
+      const trackLoud = peaksMax && Math.max(Math.abs(peaksMax[bIdx]||0), Math.abs(peaksMin[bIdx]||0)) > 0.02;
+      const arr = new Float32Array(mediaAnalyser.fftSize);
+      mediaAnalyser.getFloatTimeDomainData(arr);
+      let mx = 0;
+      for(let i=0;i<arr.length;i++){ const a=Math.abs(arr[i]); if(a>mx) mx=a; }
+      if(trackLoud && mx < 1e-4 && pos > 0.3){
+        silentStrikes++;
+        if(silentStrikes >= 2){ mediaFailed('geen audio-uitvoer'); return; }
+      } else if(mx >= 1e-4){
+        return; // er komt geluid uit: alles ok, stop met meten
+      }
+      setTimeout(check, 700);
+    };
+    setTimeout(check, 900);
+  }
+
+  function mediaFailed(reason){
+    // keylock werkt niet op dit toestel: uitschakelen en naadloos verder zonder
+    keylock = false;
+    keylockBtn.classList.remove('active');
+    trackSub.textContent = 'keylock niet ondersteund op dit toestel ('+reason+')';
+    if(isPlaying){ killSources(); startBufferEngine(); }
+  }
+
+  function startMediaEngine(){
+    activeEngine = 'media';
+    const doPlay = ()=>{
+      if(activeEngine!=='media' || !isPlaying) return;
+      try{ audioEl.currentTime = startOffset; }catch(e){}
+      audioEl.playbackRate = Math.max(0.25, Math.min(4, currentEffectiveRate()));
+      applyKeylock();
+      const p = audioEl.play();
+      if(p && p.catch) p.catch(err=> mediaFailed(err && err.name ? err.name : 'play() geweigerd'));
+      scheduleSilenceProbe();
+    };
+    if(audioEl.readyState >= 1){ doPlay(); }
+    else {
+      audioEl.addEventListener('loadedmetadata', doPlay, { once:true });
+      audioEl.load();
+      // als metadata na 1.5s nog niet binnen is, terugvallen op buffer-engine
+      setTimeout(()=>{ if(activeEngine==='media' && isPlaying && audioEl.readyState<1) mediaFailed('metadata laadt niet'); }, 1500);
+    }
+  }
+
+  function startPlayback(fromOffset){
+    if(!buffer) return;
+    ensureCtx();
+    if(ctx.state==='suspended') ctx.resume();
+    killSources();
+    startOffset = Math.max(0, Math.min(buffer.duration-0.001, fromOffset));
+    setPlayingUI(true);
+    if(keylock && audioEl) startMediaEngine();
+    else startBufferEngine();
+    requestWakeLock();
+  }
+
+  function pausePlayback(){
+    if(!isPlaying) return;
+    startOffset = currentPosition();
+    setPlayingUI(false);
+    killSources();
+  }
+
+  function stopPlayback(){
+    setPlayingUI(false);
+    killSources();
+  }
+
+  function applyRateLive(){
+    if(!isPlaying) return;
+    if(activeEngine==='media'){
+      if(audioEl) audioEl.playbackRate = Math.max(0.25, Math.min(4, currentEffectiveRate()));
+    } else if(source){
+      // positie vastleggen op de oude rate, dan pas de nieuwe rate zetten
+      startOffset = currentPosition();
+      startCtxTime = ctx.currentTime;
+      lastRate = currentEffectiveRate();
+      source.playbackRate.value = lastRate;
+    }
+  }
+
+  // ---------- wake lock (scherm aan houden tijdens spelen) ----------
+  async function requestWakeLock(){
+    try{
+      if('wakeLock' in navigator && !wakeLock){
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', ()=>{ wakeLock=null; });
+      }
+    }catch(e){ /* niet ondersteund of geweigerd */ }
+  }
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState==='visible' && isPlaying) requestWakeLock();
+  });
+
+  playBtn.addEventListener('click', () => {
+    if(!buffer) return;
+    if(isPlaying) pausePlayback();
+    else startPlayback(startOffset);
+  });
+
+  cueBtn.addEventListener('click', () => {
+    if(!buffer) return;
+    if(isPlaying){
+      // CDJ-gedrag: terug naar cue-punt en pauzeren
+      pausePlayback();
+      startOffset = cuePoint;
+      drawWave();
+    } else {
+      cuePoint = startOffset;
+      cueHint.textContent = 'cue @ ' + fmtTime(cuePoint);
+    }
+  });
+
+  // ---------- BPM / tempo ----------
+  bpmNum.addEventListener('click', () => {
+    const val = prompt('Basis-BPM van deze track:', trackBPM.toFixed(2));
+    if(val && !isNaN(parseFloat(val))){
+      trackBPM = Math.max(20, Math.min(300, parseFloat(val)));
+      updateBpmReadout();
+    }
+  });
+
+  function updateBpmReadout(){
+    const rate = currentEffectiveRate();
+    bpmNum.textContent = (trackBPM*rate).toFixed(2);
+  }
+
+  rangeToggle.addEventListener('click', (e) => {
+    const btn = e.target.closest('.range-btn');
+    if(!btn) return;
+    [...rangeToggle.children].forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    tempoRange = parseFloat(btn.dataset.range);
+    tempoSlider.min = -tempoRange; tempoSlider.max = tempoRange;
+    if(Math.abs(baseRatePercent) > tempoRange){
+      baseRatePercent = Math.sign(baseRatePercent)*tempoRange;
+    }
+    tempoSlider.value = baseRatePercent;
+    scaleMin.textContent = '-'+tempoRange+'%';
+    scaleMax.textContent = '+'+tempoRange+'%';
+    refreshTempoUI();
+  });
+
+  tempoSlider.addEventListener('input', () => {
+    baseRatePercent = parseFloat(tempoSlider.value);
+    refreshTempoUI();
+  });
+  tempoReset.addEventListener('click', () => {
+    baseRatePercent = 0; tempoSlider.value = 0; refreshTempoUI();
+  });
+  function refreshTempoUI(){
+    const sign = baseRatePercent>=0?'+':'';
+    tempoVal.textContent = sign+baseRatePercent.toFixed(1)+'%';
+    applyRateLive();
+    updateBpmReadout();
+  }
+
+  // ---------- nudge (buttons) ----------
+  function bindNudge(el, dir){
+    let active=false;
+    const press = (e)=>{ e.preventDefault(); active=true; el.classList.add('pressed'); };
+    const release = ()=>{ active=false; el.classList.remove('pressed'); };
+    el.addEventListener('pointerdown', press);
+    window.addEventListener('pointerup', release);
+    el.addEventListener('pointercancel', release);
+    el._isActive = () => active;
+    el._dir = dir;
+  }
+  bindNudge(nudgeLeft, -1);
+  bindNudge(nudgeRight, 1);
+
+  // ---------- jog wheel ----------
+  function angleFromEvent(e){
+    const rect = jogEl.getBoundingClientRect();
+    const cx = rect.left+rect.width/2, cy = rect.top+rect.height/2;
+    const dx = e.clientX-cx, dy = e.clientY-cy;
+    return Math.atan2(dy,dx)*180/Math.PI;
+  }
+  jogEl.addEventListener('pointerdown', (e)=>{
+    dragging = true;
+    lastAngle = angleFromEvent(e);
+    jogEl.setPointerCapture(e.pointerId);
+  });
+  jogEl.addEventListener('pointermove', (e)=>{
+    if(!dragging) return;
+    const ang = angleFromEvent(e);
+    let delta = ang - lastAngle;
+    if(delta>180) delta-=360;
+    if(delta<-180) delta+=360;
+    lastAngle = ang;
+    jogRotation += delta;
+    if(isPlaying){
+      // tijdens playback: subtiele pitch bend (nudge), max ±6%
+      nudgeOffset = Math.max(-0.06, Math.min(0.06, nudgeOffset + delta*0.0012));
+      applyRateLive();
+    } else if(buffer){
+      // alleen in pauze: door de track spoelen (1 omwenteling ≈ 1.8s)
+      startOffset = Math.max(0, Math.min(buffer.duration-0.001, startOffset + (delta/360)*1.8));
+      curTimeEl.textContent = fmtTime(startOffset);
+      drawWave();
+    }
+    updateBpmReadout();
+  });
+  function endDrag(){ dragging = false; }
+  jogEl.addEventListener('pointerup', endDrag);
+  jogEl.addEventListener('pointercancel', endDrag);
+
+  // ---------- waveform scrub (alleen in pauze) ----------
+  let waveDragging = false, waveLastX = 0;
+  waveCanvas.style.touchAction = 'none';
+  waveCanvas.addEventListener('pointerdown', (e)=>{
+    if(!buffer || isPlaying) return;   // track alleen verplaatsen in pauze
+    waveDragging = true;
+    waveLastX = e.clientX;
+    waveCanvas.setPointerCapture(e.pointerId);
+  });
+  waveCanvas.addEventListener('pointermove', (e)=>{
+    if(!waveDragging) return;
+    const dx = e.clientX - waveLastX;
+    waveLastX = e.clientX;
+    const secondsPerPixel = 6/waveCanvas.clientWidth; // visibleSeconds / breedte
+    startOffset = Math.max(0, Math.min(buffer.duration-0.001, startOffset - dx*secondsPerPixel));
+    curTimeEl.textContent = fmtTime(startOffset);
+    drawWave();
+  });
+  function endWaveDrag(){ waveDragging = false; }
+  waveCanvas.addEventListener('pointerup', endWaveDrag);
+  waveCanvas.addEventListener('pointercancel', endWaveDrag);
+
+  // ---------- keylock ----------
+  const keylockBtn = $('keylockBtn');
+  keylockBtn.addEventListener('click', ()=>{
+    keylock = !keylock;
+    keylockBtn.classList.toggle('active', keylock);
+    applyKeylock();
+    if(isPlaying){
+      // engine wisselen op dezelfde positie
+      const pos = currentPosition();
+      killSources();
+      startOffset = pos;
+      if(keylock && audioEl) startMediaEngine();
+      else startBufferEngine();
+    }
+  });
+
+  // ---------- EQ ----------
+  function dbLabel(v){ return (v>0?'+':'')+v+' dB'; }
+  function bindEq(slider, getFilter, valEl){
+    slider.addEventListener('input', ()=>{
+      const v = parseFloat(slider.value);
+      const kill = v <= parseFloat(slider.min);
+      valEl.textContent = kill ? 'KILL' : dbLabel(v);
+      const f = getFilter();          // filters bestaan pas na ensureCtx()
+      if(f) f.gain.value = kill ? -60 : v;
+    });
+  }
+  bindEq(lowSlider, ()=>lowFilter, lowVal);
+  bindEq(midSlider, ()=>midFilter, midVal);
+  bindEq(highSlider, ()=>highFilter, highVal);
+  masterSlider.addEventListener('input', ()=>{ if(masterGain) masterGain.gain.value=parseFloat(masterSlider.value); });
+
+  // ---------- waveform drawing ----------
+  function resizeCanvas(){
+    const dpr = window.devicePixelRatio||1;
+    const w = waveCanvas.clientWidth, h = waveCanvas.clientHeight;
+    waveCanvas.width = w*dpr; waveCanvas.height = h*dpr;
+    wctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener('resize', resizeCanvas);
+  // ---------- iOS audio unlock ----------
+  // Safari houdt audio geblokkeerd tot een directe aanraking; ontgrendel bij de
+  // eerste tap met een stille buffer zodat play() daarna altijd mag.
+  function unlockAudio(){
+    try{
+      ensureCtx();
+      if(ctx.state==='suspended') ctx.resume();
+      const b = ctx.createBuffer(1, 1, 22050);
+      const s = ctx.createBufferSource();
+      s.buffer = b; s.connect(ctx.destination); s.start(0);
+    }catch(e){}
+  }
+  document.addEventListener('touchstart', unlockAudio, { once:true });
+  document.addEventListener('pointerdown', unlockAudio, { once:true });
+
+  // ---------- PWA: offline cache (alleen actief als de app gehost wordt) ----------
+  if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    });
+  }
+
+  resizeCanvas();
+
+  function drawWave(){
+    const w = waveCanvas.clientWidth, h = waveCanvas.clientHeight;
+    wctx.clearRect(0,0,w,h);
+    if(!peaksMin){ return; }
+    const pos = currentPosition();
+    const visibleSeconds = 6;
+    const centerBucket = pos/bucketDur;
+    const bucketsVisible = visibleSeconds/bucketDur;
+    const pxPerBucket = w/bucketsVisible;
+    const midY = h/2;
+
+    // beat grid — beats liggen vast in track-tijd, dus NIET schalen met de rate
+    const beatInterval = 60/trackBPM;
+    if(beatInterval>0.15){
+      const startBeatIdx = Math.floor((pos-visibleSeconds/2-beatOffset)/beatInterval);
+      const endBeatIdx = Math.ceil((pos+visibleSeconds/2-beatOffset)/beatInterval);
+      for(let bi=startBeatIdx; bi<=endBeatIdx; bi++){
+        const t = beatOffset + bi*beatInterval;
+        const x = w/2 + (t-pos)/bucketDur*pxPerBucket;
+        const isDownbeat = ((bi%4)+4)%4 === 0;
+        wctx.strokeStyle = isDownbeat ? 'rgba(255,138,61,0.45)' : 'rgba(255,255,255,0.10)';
+        wctx.lineWidth = isDownbeat ? 1.5 : 1;
+        wctx.beginPath(); wctx.moveTo(x,0); wctx.lineTo(x,h); wctx.stroke();
+      }
+    }
+
+    const startBucket = Math.floor(centerBucket - bucketsVisible/2);
+    for(let i=0;i<bucketsVisible;i++){
+      const bIdx = startBucket+i;
+      if(bIdx<0||bIdx>=peaksMin.length) continue;
+      const mn = peaksMin[bIdx], mx = peaksMax[bIdx];
+      const x = i*pxPerBucket;
+      const y1 = midY - mx*(midY-6);
+      const y2 = midY - mn*(midY-6);
+      wctx.fillStyle = 'rgb('+bucketR[bIdx]+','+bucketG[bIdx]+','+bucketB[bIdx]+')';
+      wctx.fillRect(x, y1, Math.max(1,pxPerBucket-0.5), Math.max(1,y2-y1));
+    }
+  }
+
+  // ---------- main loop ----------
+  let lastFrame = performance.now();
+  function loop(now){
+    const dt = (now-lastFrame)/1000;
+    lastFrame = now;
+
+    // decay drag-based nudge back toward 0 when not actively dragging
+    if(!dragging && Math.abs(nudgeOffset)>0.0001){
+      nudgeOffset *= Math.max(0, 1 - dt*8);
+      if(Math.abs(nudgeOffset)<0.001) nudgeOffset = 0;
+      if(isPlaying) applyRateLive();
+    }
+    // button nudges
+    let btnNudge = 0;
+    if(nudgeLeft._isActive && nudgeLeft._isActive()) btnNudge -= 0.02;
+    if(nudgeRight._isActive && nudgeRight._isActive()) btnNudge += 0.02;
+    if(btnNudge !== 0){
+      nudgeOffset = Math.max(-0.04, Math.min(0.04, nudgeOffset + btnNudge*dt*6));
+      if(isPlaying) applyRateLive();
+    }
+
+    updateBpmReadout();
+
+    // jog visual auto-rotation while playing (independent of drag delta already applied)
+    if(isPlaying && !dragging){
+      const bpmNowVal = trackBPM*currentEffectiveRate();
+      jogRotation += (bpmNowVal/60)*180*dt; // half rotation per beat, purely visual
+    }
+    jogMarker.style.transform = 'rotate('+jogRotation+'deg)';
+
+    if(buffer){
+      const pos = currentPosition();
+      curTimeEl.textContent = fmtTime(pos);
+      drawWave();
+      if(isPlaying && pos>=buffer.duration){ stopPlayback(); startOffset=buffer.duration; }
+    }
+
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+})();
+</script>
+</body>
+</html>
