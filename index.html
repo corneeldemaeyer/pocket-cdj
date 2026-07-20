@@ -235,7 +235,7 @@ input[type=range]::-moz-range-thumb{ border:none; }
       <div class="track-sub" id="trackSub">tik op laden om te starten</div>
     </div>
     <label class="load-btn" for="fileInput">TRACK LADEN</label>
-    <input type="file" id="fileInput" accept="audio/*,.mp3,.m4a,.aac,.wav,.aiff,.flac,.mp4">
+    <input type="file" id="fileInput">
   </div>
 
   <div class="wave-wrap">
@@ -325,9 +325,10 @@ input[type=range]::-moz-range-thumb{ border:none; }
   // ---------- state ----------
   let ctx = null;
   let buffer = null;
-  let audioEl = null;       // playback via <audio> voor native keylock (preservesPitch)
-  let mediaAnalyser = null; // meet of de media-engine echt geluid levert
-  let objectUrl = null;
+  let workletNode = null;   // AudioWorklet-engine: playback + WSOLA-keylock
+  let workletReady = false;
+  let pendingTrackSend = false;
+  let engPos = 0, engPosTime = 0; // laatst gerapporteerde positie + tijdstip
   let keylock = false;  // standaard uit: buffer-engine is overal betrouwbaar
   let lowFilter, midFilter, highFilter, masterGain;
   let isPlaying = false;
@@ -349,6 +350,11 @@ input[type=range]::-moz-range-thumb{ border:none; }
   // ---------- dom ----------
   const $ = id => document.getElementById(id);
   const fileInput = $('fileInput');
+  // iOS-picker-bug: met een accept-attribuut worden bestanden grijs weergegeven.
+  // Daarom alleen op niet-iOS een filter zetten.
+  const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                 (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if(!IS_IOS) fileInput.setAttribute('accept', 'audio/*');
   const trackTitle = $('trackTitle');
   const trackSub = $('trackSub');
   const emptyHint = $('emptyHint');
@@ -384,6 +390,160 @@ input[type=range]::-moz-range-thumb{ border:none; }
     return String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');
   }
 
+  // ---------- AudioWorklet-engine (playback + WSOLA-keylock) ----------
+  const CDJ_WORKLET_CODE = `
+// WSOLA time-stretch kern (SoundTouch-achtige parameters) — gedeeld tussen test en worklet
+function makeStretcher(sr){
+  const seq  = Math.round(0.082*sr);   // sequentielengte
+  const seek = Math.round(0.028*sr);   // zoekvenster
+  const ov   = Math.round(0.012*sr);   // overlap/crossfade
+  const L    = seq - ov;               // netto output per blok
+  return {
+    sr, seq, seek, ov, L,
+    tailL: new Float32Array(ov), tailR: new Float32Array(ov),
+    tailValid: false,
+    // genereert één blok (L samples) uit chL/chR op inputpositie pos, geeft nieuwe pos terug
+    block(chL, chR, pos, rate, outL, outR){
+      const {seq, seek, ov, L} = this;
+      const len = chL.length;
+      let ip = Math.round(pos);
+      if(ip + seek + seq >= len) return -1; // einde
+      if(!this.tailValid){
+        for(let i=0;i<ov;i++){ this.tailL[i]=chL[ip+i]; this.tailR[i]=chR[ip+i]; }
+        this.tailValid = true;
+      }
+      // beste offset: maximale kruiscorrelatie tussen tail en input (mono, stap 4)
+      let best=0, bestScore=-Infinity;
+      for(let off=0; off<seek; off++){
+        let s=0, e=1e-9;
+        for(let i=0;i<ov;i+=4){
+          const v=(chL[ip+off+i]+chR[ip+off+i])*0.5, t=(this.tailL[i]+this.tailR[i])*0.5;
+          s+=v*t; e+=v*v;
+        }
+        const score = s/Math.sqrt(e);
+        if(score>bestScore){ bestScore=score; best=off; }
+      }
+      const st = ip + best;
+      for(let i=0;i<ov;i++){
+        const f=i/ov;
+        outL[i]=this.tailL[i]*(1-f)+chL[st+i]*f;
+        outR[i]=this.tailR[i]*(1-f)+chR[st+i]*f;
+      }
+      for(let i=ov;i<L;i++){ outL[i]=chL[st+i]; outR[i]=chR[st+i]; }
+      for(let i=0;i<ov;i++){ this.tailL[i]=chL[st+L+i]; this.tailR[i]=chR[st+L+i]; }
+      return pos + L*rate;
+    }
+  };
+}
+
+class CDJEngine extends AudioWorkletProcessor {
+  static get parameterDescriptors(){
+    return [{name:'rate', defaultValue:1, minValue:0.25, maxValue:4, automationRate:'k-rate'}];
+  }
+  constructor(){
+    super();
+    this.chL=null; this.chR=null; this.len=0;
+    this.pos=0; this.playing=false; this.keylock=false;
+    this.s=null; this.blockL=null; this.blockR=null;
+    this.tmpL=new Float32Array(512); this.tmpR=new Float32Array(512);
+    this.fifoL=new Float32Array(32768); this.fifoR=new Float32Array(32768);
+    this.fRead=0; this.fWrite=0; this.fCount=0; this.endedSent=false;
+    this.port.onmessage=(e)=>{
+      const m=e.data;
+      if(m.type==='load'){ this.chL=m.l; this.chR=m.r; this.len=m.l.length; this.pos=0; this.reset(); this.endedSent=false; }
+      else if(m.type==='seek'){ this.pos=Math.max(0,Math.min(this.len>0?this.len-1:0, m.pos*sampleRate)); this.reset(); this.endedSent=false; }
+      else if(m.type==='play'){ this.playing=true; }
+      else if(m.type==='pause'){ this.playing=false; this.reset(); }
+      else if(m.type==='keylock'){ this.keylock=m.on; this.reset(); }
+    };
+  }
+  reset(){ this.fRead=0; this.fWrite=0; this.fCount=0; if(this.s) this.s.tailValid=false; }
+  pushF(l,r,count){
+    const cap=this.fifoL.length;
+    for(let i=0;i<count;i++){ this.fifoL[this.fWrite]=l[i]; this.fifoR[this.fWrite]=r[i]; this.fWrite=(this.fWrite+1)%cap; }
+    this.fCount+=count;
+  }
+  ensureS(){
+    if(!this.s){
+      this.s=makeStretcher(sampleRate);
+      this.blockL=new Float32Array(this.s.L); this.blockR=new Float32Array(this.s.L);
+    }
+  }
+  genPassthrough(rate){
+    const N=512;
+    for(let i=0;i<N;i++){
+      const p=this.pos+i*rate;
+      const i0=Math.floor(p), f=p-i0;
+      if(i0+1>=this.len){ this.pos=this.len; this.pushF(this.tmpL,this.tmpR,i); return false; }
+      this.tmpL[i]=this.chL[i0]*(1-f)+this.chL[i0+1]*f;
+      this.tmpR[i]=this.chR[i0]*(1-f)+this.chR[i0+1]*f;
+    }
+    this.pos+=N*rate; this.pushF(this.tmpL,this.tmpR,N); return true;
+  }
+  process(inputs,outputs,params){
+    const out=outputs[0];
+    if(!this.playing || !this.chL) return true;
+    this.ensureS();
+    const rate=params.rate[0];
+    const need=out[0].length;
+    while(this.fCount<need){
+      let ok;
+      if(this.keylock && Math.abs(rate-1)>0.001){
+        const np=this.s.block(this.chL,this.chR,this.pos,rate,this.blockL,this.blockR);
+        if(np<0){ ok=false; } else { this.pos=np; this.pushF(this.blockL,this.blockR,this.s.L); ok=true; }
+      } else {
+        ok=this.genPassthrough(rate);
+      }
+      if(!ok){
+        this.playing=false;
+        if(!this.endedSent){ this.endedSent=true; this.port.postMessage({type:'ended'}); }
+        break;
+      }
+    }
+    const l=out[0], r=out[1]||out[0];
+    const cnt=Math.min(need,this.fCount);
+    for(let i=0;i<cnt;i++){ l[i]=this.fifoL[this.fRead]; r[i]=this.fifoR[this.fRead]; this.fRead=(this.fRead+1)%this.fifoL.length; }
+    this.fCount-=cnt;
+    // hoorbare positie = inputpositie minus wat nog in de fifo wacht
+    this.port.postMessage({pos: Math.max(0,(this.pos - this.fCount*rate))/sampleRate});
+    return true;
+  }
+}
+registerProcessor('cdj-engine', CDJEngine);
+`;
+
+  function initWorklet(){
+    if(!ctx.audioWorklet){ workletReady=false; return; }
+    const url = URL.createObjectURL(new Blob([CDJ_WORKLET_CODE], {type:'application/javascript'}));
+    ctx.audioWorklet.addModule(url).then(()=>{
+      workletNode = new AudioWorkletNode(ctx, 'cdj-engine', {
+        numberOfInputs:0, numberOfOutputs:1, outputChannelCount:[2]
+      });
+      workletNode.connect(lowFilter);
+      workletNode.port.onmessage = (e)=>{
+        const m = e.data;
+        if(m.pos !== undefined){ engPos = m.pos; engPosTime = ctx.currentTime; }
+        if(m.type === 'ended'){ setPlayingUI(false); startOffset = buffer ? buffer.duration : 0; }
+      };
+      workletReady = true;
+      if(pendingTrackSend) sendTrackToWorklet();
+    }).catch(()=>{
+      workletReady = false;
+      keylockBtn.disabled = true;
+      keylockBtn.style.opacity = 0.4;
+    });
+  }
+
+  function sendTrackToWorklet(){
+    if(!buffer) return;
+    if(!workletReady){ pendingTrackSend = true; return; }
+    pendingTrackSend = false;
+    const l = Float32Array.from(buffer.getChannelData(0));
+    const r = Float32Array.from(buffer.numberOfChannels>1 ? buffer.getChannelData(1) : buffer.getChannelData(0));
+    workletNode.port.postMessage({type:'load', l, r}, [l.buffer, r.buffer]);
+    workletNode.port.postMessage({type:'keylock', on: keylock});
+  }
+
   function ensureCtx(){
     if(!ctx){
       ctx = new (window.AudioContext||window.webkitAudioContext)();
@@ -396,21 +556,7 @@ input[type=range]::-moz-range-thumb{ border:none; }
       limiter.ratio.value = 20; limiter.attack.value = 0.002; limiter.release.value = 0.1;
       lowFilter.connect(midFilter); midFilter.connect(highFilter); highFilter.connect(masterGain);
       masterGain.connect(limiter); limiter.connect(ctx.destination);
-      audioEl = new Audio();
-      audioEl.preload = 'auto';
-      audioEl.setAttribute('playsinline','');
-      audioEl.playsInline = true;
-      const mediaSrc = ctx.createMediaElementSource(audioEl);
-      mediaAnalyser = ctx.createAnalyser();
-      mediaAnalyser.fftSize = 2048;
-      mediaSrc.connect(mediaAnalyser); mediaAnalyser.connect(lowFilter);
-      applyKeylock();
-      audioEl.addEventListener('ended', ()=>{
-        if(activeEngine!=='media') return;
-        setPlayingUI(false);
-        startOffset = buffer ? buffer.duration : 0;
-      });
-      audioEl.addEventListener('error', ()=>{ if(activeEngine==='media') mediaFailed('audio-element error'); });
+      initWorklet();
     }
     if(ctx.state==='suspended') ctx.resume();
   }
@@ -430,10 +576,7 @@ input[type=range]::-moz-range-thumb{ border:none; }
       trackSub.textContent = 'kon "'+file.name+'" niet decoderen — probeer mp3, m4a of wav (ogg/opus werkt niet op iPhone)';
       return;
     }
-    if(objectUrl) URL.revokeObjectURL(objectUrl);
-    objectUrl = URL.createObjectURL(file);
-    audioEl.src = objectUrl;
-    audioEl.load();
+    sendTrackToWorklet();
     stopPlayback();
     startOffset = 0; cuePoint = 0;
     totTimeEl.textContent = fmtTime(buffer.duration);
@@ -573,15 +716,11 @@ input[type=range]::-moz-range-thumb{ border:none; }
     bpmDetected = true;
   }
 
-  // ---------- transport: dubbele engine ----------
-  // 'buffer'  = AudioBufferSourceNode: werkt overal, pitch schuift mee met tempo
-  // 'media'   = <audio>-element met preservesPitch: keylock, maar niet op elk toestel
-  // Keylock UIT -> buffer-engine (betrouwbaar). Keylock AAN -> media-engine,
-  // met automatische terugval naar buffer als die faalt.
-  let source = null;        // actieve BufferSource
-  let startCtxTime = 0;     // ctx.currentTime bij laatste (re)start (buffer-engine)
-  let lastRate = 1;         // rate bij laatste positie-commit (buffer-engine)
-  let activeEngine = 'buffer';
+  // ---------- transport (AudioWorklet-engine, met buffer-fallback) ----------
+  let source = null;        // fallback: AudioBufferSource als de worklet niet laadt
+  let startCtxTime = 0;
+  let lastRate = 1;
+  let activeEngine = 'worklet';
 
   function currentEffectiveRate(){
     const pct = baseRatePercent + nudgeOffset*100;
@@ -590,16 +729,10 @@ input[type=range]::-moz-range-thumb{ border:none; }
   function currentPosition(){
     if(!buffer) return 0;
     if(!isPlaying) return startOffset;
-    if(activeEngine==='media'){
-      if(!audioEl || audioEl.readyState < 1) return startOffset;
-      return audioEl.currentTime;
+    if(activeEngine==='worklet'){
+      return Math.min(buffer.duration, engPos + (ctx.currentTime - engPosTime) * currentEffectiveRate());
     }
     return startOffset + (ctx.currentTime - startCtxTime) * lastRate;
-  }
-  function applyKeylock(){
-    if(!audioEl) return;
-    audioEl.preservesPitch = keylock;
-    audioEl.webkitPreservesPitch = keylock;
   }
   function setPlayingUI(on){
     isPlaying = on;
@@ -609,7 +742,7 @@ input[type=range]::-moz-range-thumb{ border:none; }
   }
   function killSources(){
     if(source){ source.onended=null; try{source.stop();}catch(e){} source.disconnect(); source=null; }
-    if(audioEl && !audioEl.paused) audioEl.pause();
+    if(workletNode) workletNode.port.postMessage({type:'pause'});
   }
 
   function startBufferEngine(){
@@ -627,60 +760,6 @@ input[type=range]::-moz-range-thumb{ border:none; }
     };
   }
 
-  // iOS-bug: media-element door Web Audio kan geluidloos "spelen" zonder error.
-  // Meet daarom de echte uitvoer; alleen ingrijpen als de track op die plek
-  // volgens de waveform NIET stil hoort te zijn.
-  let silentStrikes = 0;
-  function scheduleSilenceProbe(){
-    silentStrikes = 0;
-    const check = ()=>{
-      if(activeEngine!=='media' || !isPlaying || !mediaAnalyser) return;
-      const pos = audioEl.currentTime;
-      const bIdx = Math.min(peaksMax ? peaksMax.length-1 : 0, Math.floor(pos/bucketDur));
-      const trackLoud = peaksMax && Math.max(Math.abs(peaksMax[bIdx]||0), Math.abs(peaksMin[bIdx]||0)) > 0.02;
-      const arr = new Float32Array(mediaAnalyser.fftSize);
-      mediaAnalyser.getFloatTimeDomainData(arr);
-      let mx = 0;
-      for(let i=0;i<arr.length;i++){ const a=Math.abs(arr[i]); if(a>mx) mx=a; }
-      if(trackLoud && mx < 1e-4 && pos > 0.3){
-        silentStrikes++;
-        if(silentStrikes >= 2){ mediaFailed('geen audio-uitvoer'); return; }
-      } else if(mx >= 1e-4){
-        return; // er komt geluid uit: alles ok, stop met meten
-      }
-      setTimeout(check, 700);
-    };
-    setTimeout(check, 900);
-  }
-
-  function mediaFailed(reason){
-    // keylock werkt niet op dit toestel: uitschakelen en naadloos verder zonder
-    keylock = false;
-    keylockBtn.classList.remove('active');
-    trackSub.textContent = 'keylock niet ondersteund op dit toestel ('+reason+')';
-    if(isPlaying){ killSources(); startBufferEngine(); }
-  }
-
-  function startMediaEngine(){
-    activeEngine = 'media';
-    const doPlay = ()=>{
-      if(activeEngine!=='media' || !isPlaying) return;
-      try{ audioEl.currentTime = startOffset; }catch(e){}
-      audioEl.playbackRate = Math.max(0.25, Math.min(4, currentEffectiveRate()));
-      applyKeylock();
-      const p = audioEl.play();
-      if(p && p.catch) p.catch(err=> mediaFailed(err && err.name ? err.name : 'play() geweigerd'));
-      scheduleSilenceProbe();
-    };
-    if(audioEl.readyState >= 1){ doPlay(); }
-    else {
-      audioEl.addEventListener('loadedmetadata', doPlay, { once:true });
-      audioEl.load();
-      // als metadata na 1.5s nog niet binnen is, terugvallen op buffer-engine
-      setTimeout(()=>{ if(activeEngine==='media' && isPlaying && audioEl.readyState<1) mediaFailed('metadata laadt niet'); }, 1500);
-    }
-  }
-
   function startPlayback(fromOffset){
     if(!buffer) return;
     ensureCtx();
@@ -688,8 +767,16 @@ input[type=range]::-moz-range-thumb{ border:none; }
     killSources();
     startOffset = Math.max(0, Math.min(buffer.duration-0.001, fromOffset));
     setPlayingUI(true);
-    if(keylock && audioEl) startMediaEngine();
-    else startBufferEngine();
+    if(workletReady && workletNode){
+      activeEngine = 'worklet';
+      engPos = startOffset; engPosTime = ctx.currentTime;
+      const p = workletNode.parameters.get('rate');
+      p.value = Math.max(0.25, Math.min(4, currentEffectiveRate()));
+      workletNode.port.postMessage({type:'seek', pos:startOffset});
+      workletNode.port.postMessage({type:'play'});
+    } else {
+      startBufferEngine();
+    }
     requestWakeLock();
   }
 
@@ -707,10 +794,13 @@ input[type=range]::-moz-range-thumb{ border:none; }
 
   function applyRateLive(){
     if(!isPlaying) return;
-    if(activeEngine==='media'){
-      if(audioEl) audioEl.playbackRate = Math.max(0.25, Math.min(4, currentEffectiveRate()));
+    if(activeEngine==='worklet'){
+      if(workletNode){
+        // positie vastleggen op de oude rate voor een vloeiende extrapolatie
+        engPos = currentPosition(); engPosTime = ctx.currentTime;
+        workletNode.parameters.get('rate').value = Math.max(0.25, Math.min(4, currentEffectiveRate()));
+      }
     } else if(source){
-      // positie vastleggen op de oude rate, dan pas de nieuwe rate zetten
       startOffset = currentPosition();
       startCtxTime = ctx.currentTime;
       lastRate = currentEffectiveRate();
@@ -869,17 +959,10 @@ input[type=range]::-moz-range-thumb{ border:none; }
   // ---------- keylock ----------
   const keylockBtn = $('keylockBtn');
   keylockBtn.addEventListener('click', ()=>{
+    if(!workletReady){ return; } // keylock vereist de worklet-engine
     keylock = !keylock;
     keylockBtn.classList.toggle('active', keylock);
-    applyKeylock();
-    if(isPlaying){
-      // engine wisselen op dezelfde positie
-      const pos = currentPosition();
-      killSources();
-      startOffset = pos;
-      if(keylock && audioEl) startMediaEngine();
-      else startBufferEngine();
-    }
+    if(workletNode) workletNode.port.postMessage({type:'keylock', on:keylock});
   });
 
   // ---------- EQ ----------
