@@ -56,7 +56,7 @@ body{
 /* ---------- HEADER ---------- */
 .topbar{
   display:flex; align-items:center; justify-content:space-between;
-  padding:14px 16px 10px; gap:10px;
+  padding:14px 16px 10px;
   border-bottom:1px solid var(--line);
 }
 .brand{
@@ -94,7 +94,7 @@ body{
 }
 .time-row .mono{ color:var(--text); }
 .empty-hint{
-  position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+  position:absolute; top:0; right:0; bottom:0; left:0; display:flex; align-items:center; justify-content:center;
   font-size:11px; color:var(--text-dim); letter-spacing:.5px; pointer-events:none;
 }
 
@@ -103,32 +103,40 @@ body{
   display:flex; align-items:center; justify-content:space-between;
   padding:14px 16px 6px;
 }
-.bpm-readout{ display:flex; align-items:baseline; gap:6px; }
+.bpm-readout{ display:flex; align-items:baseline; }
+.bpm-readout > * + *{ margin-left:6px; }
 .bpm-num{ font-size:36px; font-weight:700; color:var(--teal); letter-spacing:1px; line-height:1; }
 .bpm-label{ font-size:11px; color:var(--text-dim); letter-spacing:2px; font-weight:600; }
-.range-toggle{ display:flex; gap:4px; }
+.range-toggle{ display:flex; }
+.range-toggle > * + *{ margin-left:4px; }
 .range-btn{
   background:var(--panel-3); border:1px solid var(--line); color:var(--text-dim);
   font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700;
   padding:7px 9px; border-radius:5px; cursor:pointer;
 }
+.tempo-hdr{ display:flex; align-items:center; }
+.tempo-hdr > * + *{ margin-left:10px; }
 .range-btn.active{ background:var(--amber-dim); border-color:var(--amber); color:var(--amber); }
 
 /* ---------- JOG ---------- */
 .jog-area{
-  display:flex; align-items:center; justify-content:center; gap:clamp(8px,3vw,18px);
-  padding:8px 10px 14px;
+  display:flex; align-items:center; justify-content:center;
+  padding:8px 6px 14px;
 }
+.jog-area > * + *{ margin-left:8px; }
 .nudge-btn{
-  width:clamp(32px,9vw,44px); height:clamp(76px,24vw,96px); border-radius:10px; flex-shrink:0;
+  width:36px; height:84px; border-radius:10px; flex-shrink:0; /* veilige vaste maat, ook op oude Safari */
   background:var(--panel-3); border:1px solid var(--line); color:var(--text-dim);
   font-size:18px; display:flex; align-items:center; justify-content:center;
   user-select:none; cursor:pointer;
 }
+@supports (width:clamp(1px,1vw,2px)){
+  .nudge-btn{ width:clamp(32px,9vw,44px); height:clamp(76px,24vw,96px); }
+}
 .nudge-btn:active, .nudge-btn.pressed{ background:var(--teal-dim); border-color:var(--teal); color:var(--teal); }
 
 .jog{
-  position:relative; width:clamp(140px,46vw,190px); height:clamp(140px,46vw,190px); border-radius:50%; flex-shrink:0;
+  position:relative; width:150px; height:150px; border-radius:50%; flex-shrink:0; /* veilige vaste maat */
   background:
     radial-gradient(circle at 50% 42%, #33363f 0%, #23252c 55%, #191a1f 100%);
   border:1px solid var(--line);
@@ -136,8 +144,11 @@ body{
   touch-action:none; cursor:grab;
 }
 .jog-ring{
-  position:absolute; inset:8px; border-radius:50%;
+  position:absolute; top:8px; right:8px; bottom:8px; left:8px; border-radius:50%;
   border:1px dashed #40434f;
+}
+@supports (width:clamp(1px,1vw,2px)){
+  .jog{ width:clamp(140px,46vw,190px); height:clamp(140px,46vw,190px); }
 }
 .jog-marker{
   position:absolute; top:7%; left:50%; width:3px; height:14%;
@@ -157,10 +168,11 @@ body{
 
 /* ---------- TRANSPORT ---------- */
 .transport{
-  display:flex; align-items:center; justify-content:center; gap:12px;
+  display:flex; align-items:center; justify-content:center;
   padding:6px 16px 18px;
 }
-.loop-row{ display:flex; gap:8px; padding:10px 16px 0; }
+.loop-row{ display:flex; padding:10px 16px 0; }
+.loop-row > * + *{ margin-left:8px; }
 .lbtn{
   border:none; border-radius:8px; font-family:'Inter',sans-serif; font-weight:700;
   font-size:11px; letter-spacing:1px; cursor:pointer; padding:11px 0;
@@ -174,8 +186,9 @@ body{
 .tbtn{
   border:none; border-radius:8px; font-family:'Inter',sans-serif; font-weight:700;
   font-size:12px; letter-spacing:1px; cursor:pointer; padding:14px 22px;
-  display:flex; align-items:center; gap:8px;
+  display:flex; align-items:center;
 }
+.tbtn > * + *{ margin-left:8px; }
 .tbtn.cue{ background:var(--panel-3); color:var(--text); border:1px solid var(--line); }
 .tbtn.cue:active{ background:var(--red-dim); border-color:var(--red); color:var(--red); }
 .tbtn.play{ background:var(--amber); color:#1a1204; min-width:150px; justify-content:center; }
@@ -207,7 +220,8 @@ body{
 
 /* ---------- EQ ---------- */
 .eq-row{ display:flex; justify-content:space-around; align-items:flex-end; padding-top:4px;}
-.eq-band{ display:flex; flex-direction:column; align-items:center; gap:8px; }
+.eq-band{ display:flex; flex-direction:column; align-items:center; }
+.eq-band > * + *{ margin-top:8px; }
 .eq-val{ font-size:11px; color:var(--text-dim); width:44px; text-align:center; }
 /* verticale sliders: iOS Safari kent geen slider-vertical/writing-mode op range,
    dus we roteren een horizontale slider — werkt overal */
@@ -226,7 +240,8 @@ body{
 .eq-band[data-band="high"] .eq-slider::-webkit-slider-thumb{ background:var(--teal); }
 .eq-label{ font-size:10px; letter-spacing:1.5px; font-weight:700; color:var(--text-dim); }
 
-.master-row{ display:flex; align-items:center; gap:12px; margin-top:16px; }
+.master-row{ display:flex; align-items:center; margin-top:16px; }
+.master-row > * + *{ margin-left:12px; }
 .master-row .lbl{ font-size:10px; letter-spacing:1.5px; font-weight:700; color:var(--text-dim); width:52px;}
 .master-slider{ -webkit-appearance:none; flex:1; height:4px; border-radius:2px; background:var(--panel-3); outline:none;}
 .master-slider::-webkit-slider-thumb{ -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:#d7dae2; cursor:pointer;}
@@ -243,8 +258,8 @@ input[type=range]::-moz-range-thumb{ border:none; }
   .bpm-num{ font-size:28px; }
   .ver-badge{ display:none; }
   .range-btn{ padding:6px 6px; font-size:10px; }
-  .filter-row{ padding:8px 12px; }
-  .loop-row{ padding:8px 12px 0; gap:6px; }
+    .loop-row{ padding:8px 12px 0; }
+    .loop-row > * + *{ margin-left:6px; }
   .lbtn{ font-size:10px; padding:9px 0; }
   .tbtn{ padding:12px 14px; font-size:11px; }
   section, .card{ padding-left:12px; padding-right:12px; }
@@ -283,7 +298,7 @@ input[type=range]::-moz-range-thumb{ border:none; }
     <div class="bpm-readout">
       <span class="bpm-num mono" id="bpmNum">120.00</span>
       <span class="bpm-label">BPM</span>
-      <span class="ver-badge">v15</span>
+      <span class="ver-badge" id="verBadge">v16</span>
     </div>
     <div class="range-toggle" id="rangeToggle">
       <button class="range-btn" data-range="8">±8%</button>
@@ -314,15 +329,9 @@ input[type=range]::-moz-range-thumb{ border:none; }
   </div>
 
   <div class="section">
-    <div class="filter-row">
-    <span class="filter-label">FILTER</span>
-    <input type="range" id="filterSlider" class="filter-slider" min="-100" max="100" value="0">
-    <span class="filter-val" id="filterVal">OFF</span>
-  </div>
-
-  <div class="section-head">
+    <div class="section-head">
       <span class="t">TEMPO</span>
-      <span style="display:flex;gap:10px;align-items:center;">
+      <span class="tempo-hdr">
         <button class="range-btn" id="keylockBtn" title="Toonhoogte vasthouden bij tempowijziging">KEYLOCK</button>
         <span class="v mono" id="tempoVal">+0.0%</span>
       </span>
@@ -333,13 +342,7 @@ input[type=range]::-moz-range-thumb{ border:none; }
   </div>
 
   <div class="section">
-    <div class="filter-row">
-    <span class="filter-label">FILTER</span>
-    <input type="range" id="filterSlider" class="filter-slider" min="-100" max="100" value="0">
-    <span class="filter-val" id="filterVal">OFF</span>
-  </div>
-
-  <div class="section-head"><span class="t">EQ (3-BAND)</span><span class="v mono" id="eqSummary"></span></div>
+    <div class="section-head"><span class="t">EQ (3-BAND)</span><span class="v mono" id="eqSummary"></span></div>
     <div class="eq-row">
       <div class="eq-band" data-band="low">
         <div class="eq-val mono" id="lowVal">0 dB</div>
@@ -431,8 +434,6 @@ input[type=range]::-moz-range-thumb{ border:none; }
     });
   }
 
-  let filterNode = null;      // low-pass of high-pass filter
-  let filterValue = 0;         // -100 (hoog-pass) tot +100 (laag-pass)
   let analyser = null;         // VU-meter
   let currentTrackId = null;   // trackID voor geheugen
 
@@ -677,11 +678,7 @@ registerProcessor('cdj-engine', CDJEngine);
       limiter.threshold.value = -1; limiter.knee.value = 0;
       limiter.ratio.value = 20; limiter.attack.value = 0.002; limiter.release.value = 0.1;
       lowFilter.connect(midFilter); midFilter.connect(highFilter); highFilter.connect(masterGain);
-      filterNode = ctx.createBiquadFilter();
-      filterNode.type = 'lowpass';
-      filterNode.frequency.value = 20000;
-      masterGain.connect(filterNode);
-      filterNode.connect(limiter);
+      masterGain.connect(limiter);
       limiter.connect(ctx.destination);
       analyser = ctx.createAnalyser();
       analyser.fftSize = 256;
@@ -1007,19 +1004,6 @@ registerProcessor('cdj-engine', CDJEngine);
   cueBtn.addEventListener('pointerup', cueRelease);
   cueBtn.addEventListener('pointercancel', cueRelease);
 
-  // ---------- Filter (low-pass / high-pass) ----------
-  const filterSlider = $('filterSlider'), filterVal = $('filterVal');
-  filterSlider.addEventListener('input', ()=>{
-    filterValue = parseFloat(filterSlider.value);
-    if(!filterNode) return;
-    const val = Math.abs(filterValue);
-    const freq = 20 + val*val*1.5;
-    filterNode.frequency.value = freq;
-    if(filterValue > 5) filterVal.textContent = 'LP '+Math.round(freq)+'Hz';
-    else if(filterValue < -5) filterVal.textContent = 'HP '+Math.round(freq)+'Hz';
-    else filterVal.textContent = 'OFF';
-  });
-
   // ---------- BPM / tempo ----------
   bpmNum.addEventListener('click', () => {
     const val = prompt('Basis-BPM van deze track:', trackBPM.toFixed(2));
@@ -1169,25 +1153,34 @@ registerProcessor('cdj-engine', CDJEngine);
   waveCanvas.addEventListener('pointerup', endWaveDrag);
   waveCanvas.addEventListener('pointercancel', endWaveDrag);
 
-  // ---------- overzicht-waveform: needle search (alleen in pauze) ----------
-  let ovDragging = false;
+  // ---------- overzicht-waveform: needle search (werkt ook tijdens playback) ----------
+  let ovDragging = false, ovLastSeek = 0;
   overviewCanvas.style.touchAction = 'none';
-  function seekFromOverviewEvent(e){
+  function seekFromOverviewEvent(e, throttled){
     const r = overviewCanvas.getBoundingClientRect();
     const frac = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
-    startOffset = frac * buffer.duration;
-    curTimeEl.textContent = fmtTime(startOffset);
-    drawWave();
+    const target = frac * buffer.duration;
+    if(isPlaying){
+      // tijdens playback: throttlen zodat slepen niet knettert door te veel herstarts
+      const now = performance.now();
+      if(throttled && now - ovLastSeek < 90) return;
+      ovLastSeek = now;
+      startPlayback(target);
+    } else {
+      startOffset = target;
+      curTimeEl.textContent = fmtTime(startOffset);
+      drawWave();
+    }
   }
   overviewCanvas.addEventListener('pointerdown', (e)=>{
-    if(!buffer || isPlaying) return; // track alleen verplaatsen in pauze
+    if(!buffer) return;
     ovDragging = true;
     try{ overviewCanvas.setPointerCapture(e.pointerId); }catch(err){}
-    seekFromOverviewEvent(e);
+    seekFromOverviewEvent(e, false);
   });
   overviewCanvas.addEventListener('pointermove', (e)=>{
     if(!ovDragging) return;
-    seekFromOverviewEvent(e);
+    seekFromOverviewEvent(e, true);
   });
   function endOvDrag(){ ovDragging = false; }
   overviewCanvas.addEventListener('pointerup', endOvDrag);
@@ -1396,6 +1389,38 @@ registerProcessor('cdj-engine', CDJEngine);
 
 
   resizeCanvas();
+
+  // ---------- diagnose-overlay: 3x tikken op de tracktitel bovenaan ----------
+  (function(){
+    const trigger = document.getElementById('trackTitle');
+    if(!trigger) return;
+    let taps = [];
+    trigger.addEventListener('click', ()=>{
+      const now = Date.now();
+      taps = taps.filter(t=>now-t<900);
+      taps.push(now);
+      if(taps.length < 3) return;
+      taps = [];
+      const safe = (fn, fallback)=>{ try{ return fn(); }catch(e){ return fallback; } };
+      const lines = [
+        'Pocket CDJ diagnose (versie: ' + (document.getElementById('verBadge') ? document.getElementById('verBadge').textContent : '?') + ')',
+        'scherm: ' + window.innerWidth + 'x' + window.innerHeight,
+        'body scrollWidth: ' + document.body.scrollWidth + ' (moet == schermbreedte)',
+        'devicePixelRatio: ' + window.devicePixelRatio,
+        'CSS gap (flex): ' + safe(()=>CSS.supports('gap','10px'), 'onbekend'),
+        'CSS clamp(): ' + safe(()=>CSS.supports('width','clamp(1px,1vw,2px)'), 'onbekend'),
+        'CSS inset: ' + safe(()=>CSS.supports('inset','0'), 'onbekend'),
+        'AudioWorklet: ' + (window.AudioContext ? !!(new (window.AudioContext||window.webkitAudioContext)()).audioWorklet : 'geen AudioContext'),
+        'Service Worker: ' + ('serviceWorker' in navigator),
+        'UA: ' + navigator.userAgent
+      ];
+      const box = document.createElement('div');
+      box.style.cssText = 'position:fixed;top:10px;right:10px;bottom:10px;left:10px;background:#000;color:#0f0;font-family:monospace;font-size:11px;padding:14px;z-index:99999;overflow:auto;border:2px solid #0f0;border-radius:8px;white-space:pre-wrap;';
+      box.textContent = lines.join('\n') + '\n\n(tik om te sluiten)';
+      box.addEventListener('click', ()=> box.remove());
+      document.body.appendChild(box);
+    });
+  })();
 
   function drawOverview(){
     const w = overviewCanvas.clientWidth, h = overviewCanvas.clientHeight;
