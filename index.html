@@ -125,39 +125,34 @@ body{
 }
 .jog-area > * + *{ margin-left:8px; }
 .nudge-btn{
-  width:36px; height:84px; border-radius:10px; flex-shrink:0; /* veilige vaste maat, ook op oude Safari */
+  width:34px; height:80px; border-radius:10px; flex-shrink:0; /* vaste maat, werkt op elke browser */
   background:var(--panel-3); border:1px solid var(--line); color:var(--text-dim);
   font-size:18px; display:flex; align-items:center; justify-content:center;
   user-select:none; cursor:pointer;
 }
-@supports (width:clamp(1px,1vw,2px)){
-  .nudge-btn{ width:clamp(32px,9vw,44px); height:clamp(76px,24vw,96px); }
-}
 .nudge-btn:active, .nudge-btn.pressed{ background:var(--teal-dim); border-color:var(--teal); color:var(--teal); }
 
 .jog{
-  position:relative; width:150px; height:150px; border-radius:50%; flex-shrink:0; /* veilige vaste maat */
+  position:relative; width:160px; height:160px; border-radius:50%; flex-shrink:0; /* vaste maat, werkt op elke browser */
   background:
     radial-gradient(circle at 50% 42%, #33363f 0%, #23252c 55%, #191a1f 100%);
   border:1px solid var(--line);
   box-shadow: inset 0 0 0 8px #14151a, inset 0 0 30px rgba(0,0,0,.6), 0 6px 18px rgba(0,0,0,.5);
   touch-action:none; cursor:grab;
+  overflow:hidden; /* voorkomt dat een kind-element (marker) ooit buiten de cirkel kan uitsteken */
 }
 .jog-ring{
   position:absolute; top:8px; right:8px; bottom:8px; left:8px; border-radius:50%;
   border:1px dashed #40434f;
 }
-@supports (width:clamp(1px,1vw,2px)){
-  .jog{ width:clamp(140px,46vw,190px); height:clamp(140px,46vw,190px); }
-}
 .jog-marker{
-  position:absolute; top:7%; left:50%; width:3px; height:14%;
-  background:var(--teal); border-radius:2px; transform-origin:50% 350%;
+  position:absolute; top:12px; left:50%; width:3px; height:22px;
+  background:var(--teal); border-radius:2px; transform-origin:50% 68px;
   box-shadow:0 0 6px var(--teal);
 }
 .jog-center{
   position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-  width:34%; height:34%; border-radius:50%;
+  width:54px; height:54px; border-radius:50%;
   background:var(--panel); border:1px solid var(--line);
   display:flex; align-items:center; justify-content:center;
   flex-direction:column; pointer-events:none;
