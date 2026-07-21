@@ -82,6 +82,7 @@ body{
   background:linear-gradient(180deg,#141519,#181A20);
 }
 #waveCanvas{ display:block; width:100%; height:110px; }
+.overview-wave{ display:block; width:100%; height:34px; touch-action:none; border-top:1px solid var(--line); }
 .playhead-line{
   position:absolute; top:6px; bottom:22px; left:50%; width:2px;
   background:var(--amber); box-shadow:0 0 8px var(--amber);
@@ -115,11 +116,11 @@ body{
 
 /* ---------- JOG ---------- */
 .jog-area{
-  display:flex; align-items:center; justify-content:center; gap:18px;
-  padding:8px 16px 14px;
+  display:flex; align-items:center; justify-content:center; gap:clamp(8px,3vw,18px);
+  padding:8px 10px 14px;
 }
 .nudge-btn{
-  width:44px; height:96px; border-radius:10px;
+  width:clamp(32px,9vw,44px); height:clamp(76px,24vw,96px); border-radius:10px; flex-shrink:0;
   background:var(--panel-3); border:1px solid var(--line); color:var(--text-dim);
   font-size:18px; display:flex; align-items:center; justify-content:center;
   user-select:none; cursor:pointer;
@@ -127,7 +128,7 @@ body{
 .nudge-btn:active, .nudge-btn.pressed{ background:var(--teal-dim); border-color:var(--teal); color:var(--teal); }
 
 .jog{
-  position:relative; width:190px; height:190px; border-radius:50%;
+  position:relative; width:clamp(140px,46vw,190px); height:clamp(140px,46vw,190px); border-radius:50%; flex-shrink:0;
   background:
     radial-gradient(circle at 50% 42%, #33363f 0%, #23252c 55%, #191a1f 100%);
   border:1px solid var(--line);
@@ -139,13 +140,13 @@ body{
   border:1px dashed #40434f;
 }
 .jog-marker{
-  position:absolute; top:14px; left:50%; width:3px; height:26px;
-  background:var(--teal); border-radius:2px; transform-origin:50% 81px;
+  position:absolute; top:7%; left:50%; width:3px; height:14%;
+  background:var(--teal); border-radius:2px; transform-origin:50% 350%;
   box-shadow:0 0 6px var(--teal);
 }
 .jog-center{
   position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-  width:64px; height:64px; border-radius:50%;
+  width:34%; height:34%; border-radius:50%;
   background:var(--panel); border:1px solid var(--line);
   display:flex; align-items:center; justify-content:center;
   flex-direction:column; pointer-events:none;
@@ -234,6 +235,20 @@ body{
 .footnote b{ color:var(--text); }
 
 input[type=range]::-moz-range-thumb{ border:none; }
+
+@media (max-width:340px){
+  .topbar{ padding:12px 12px 8px; }
+  .transport-info{ padding:2px 12px 6px; }
+  .bpm-row{ padding-left:12px; padding-right:12px; }
+  .bpm-num{ font-size:28px; }
+  .ver-badge{ display:none; }
+  .range-btn{ padding:6px 6px; font-size:10px; }
+  .filter-row{ padding:8px 12px; }
+  .loop-row{ padding:8px 12px 0; gap:6px; }
+  .lbtn{ font-size:10px; padding:9px 0; }
+  .tbtn{ padding:12px 14px; font-size:11px; }
+  section, .card{ padding-left:12px; padding-right:12px; }
+}
 </style>
 </head>
 <body>
@@ -251,6 +266,10 @@ input[type=range]::-moz-range-thumb{ border:none; }
 
   <div class="wave-wrap">
     <canvas id="waveCanvas"></canvas>
+    <canvas id="overviewCanvas" class="overview-wave"></canvas>
+    <div class="vu-meter">
+      <div class="vu-bar"><div class="vu-fill" id="vuFill"></div></div>
+    </div>
     <div class="playhead-line"></div>
     <div class="empty-hint" id="emptyHint">laad een audiobestand (ook vanaf USB-opslag)</div>
   </div>
@@ -264,7 +283,7 @@ input[type=range]::-moz-range-thumb{ border:none; }
     <div class="bpm-readout">
       <span class="bpm-num mono" id="bpmNum">120.00</span>
       <span class="bpm-label">BPM</span>
-      <span class="ver-badge">v12</span>
+      <span class="ver-badge">v15</span>
     </div>
     <div class="range-toggle" id="rangeToggle">
       <button class="range-btn" data-range="8">±8%</button>
@@ -295,7 +314,13 @@ input[type=range]::-moz-range-thumb{ border:none; }
   </div>
 
   <div class="section">
-    <div class="section-head">
+    <div class="filter-row">
+    <span class="filter-label">FILTER</span>
+    <input type="range" id="filterSlider" class="filter-slider" min="-100" max="100" value="0">
+    <span class="filter-val" id="filterVal">OFF</span>
+  </div>
+
+  <div class="section-head">
       <span class="t">TEMPO</span>
       <span style="display:flex;gap:10px;align-items:center;">
         <button class="range-btn" id="keylockBtn" title="Toonhoogte vasthouden bij tempowijziging">KEYLOCK</button>
@@ -308,7 +333,13 @@ input[type=range]::-moz-range-thumb{ border:none; }
   </div>
 
   <div class="section">
-    <div class="section-head"><span class="t">EQ (3-BAND)</span><span class="v mono" id="eqSummary"></span></div>
+    <div class="filter-row">
+    <span class="filter-label">FILTER</span>
+    <input type="range" id="filterSlider" class="filter-slider" min="-100" max="100" value="0">
+    <span class="filter-val" id="filterVal">OFF</span>
+  </div>
+
+  <div class="section-head"><span class="t">EQ (3-BAND)</span><span class="v mono" id="eqSummary"></span></div>
     <div class="eq-row">
       <div class="eq-band" data-band="low">
         <div class="eq-val mono" id="lowVal">0 dB</div>
@@ -345,6 +376,66 @@ input[type=range]::-moz-range-thumb{ border:none; }
   let buffer = null;
   let workletNode = null;   // AudioWorklet-engine: playback + WSOLA-keylock
   let workletReady = false;
+  // ---------- Track-geheugen (IndexedDB) ----------
+  let db = null;
+  const dbRequest = indexedDB.open('PocketCDJ', 1);
+  dbRequest.onupgradeneeded = (e) => {
+    const d = e.target.result;
+    if(!d.objectStoreNames.contains('tracks')){
+      d.createObjectStore('tracks', {keyPath:'trackId'});
+    }
+  };
+  dbRequest.onsuccess = (e) => { db = e.target.result; };
+  dbRequest.onerror = () => { db = null; };
+
+  function trackHash(file) {
+    // eenvoudige ID: filenaam + duratie als bytes (niet uniek, maar goed genoeg)
+    const dur = buffer ? Math.round(buffer.duration*100) : 0;
+    return file.name.replace(/[^a-z0-9]/gi,'_') + '_' + dur;
+  }
+
+  async function saveTrackData(){
+    if(!db || !buffer) return;
+    const id = currentTrackId;
+    const data = {
+      trackId: id,
+      bpm: trackBPM,
+      beatOffset: beatOffset,
+      cuePoint: cuePoint,
+      timestamp: Date.now()
+    };
+    return new Promise(resolve => {
+      const tx = db.transaction(['tracks'],'readwrite');
+      tx.objectStore('tracks').put(data);
+      tx.oncomplete = resolve;
+    });
+  }
+
+  async function loadTrackData(id){
+    if(!db) return false;
+    return new Promise(resolve => {
+      const tx = db.transaction(['tracks'],'readonly');
+      const req = tx.objectStore('tracks').get(id);
+      req.onsuccess = (e) => {
+        const data = e.target.result;
+        if(data){
+          trackBPM = data.bpm || 120;
+          beatOffset = data.beatOffset || 0;
+          cuePoint = data.cuePoint || 0;
+          hotcues = data.hotcues || {A:null, B:null, C:null, D:null};
+                resolve(true);
+        } else {
+          resolve(false);
+        }
+      };
+    });
+  }
+
+  let filterNode = null;      // low-pass of high-pass filter
+  let filterValue = 0;         // -100 (hoog-pass) tot +100 (laag-pass)
+  let analyser = null;         // VU-meter
+  let currentTrackId = null;   // trackID voor geheugen
+
   let pendingTrackSend = false;
   let engPos = 0, engPosTime = 0; // laatst gerapporteerde positie + tijdstip
   let keylock = false;  // standaard uit: buffer-engine is overal betrouwbaar
@@ -378,6 +469,8 @@ input[type=range]::-moz-range-thumb{ border:none; }
   const emptyHint = $('emptyHint');
   const waveCanvas = $('waveCanvas');
   const wctx = waveCanvas.getContext('2d');
+  const overviewCanvas = $('overviewCanvas');
+  const octx = overviewCanvas.getContext('2d');
   const curTimeEl = $('curTime');
   const totTimeEl = $('totTime');
   const cueHint = $('cueHint');
@@ -584,7 +677,15 @@ registerProcessor('cdj-engine', CDJEngine);
       limiter.threshold.value = -1; limiter.knee.value = 0;
       limiter.ratio.value = 20; limiter.attack.value = 0.002; limiter.release.value = 0.1;
       lowFilter.connect(midFilter); midFilter.connect(highFilter); highFilter.connect(masterGain);
-      masterGain.connect(limiter); limiter.connect(ctx.destination);
+      filterNode = ctx.createBiquadFilter();
+      filterNode.type = 'lowpass';
+      filterNode.frequency.value = 20000;
+      masterGain.connect(filterNode);
+      filterNode.connect(limiter);
+      limiter.connect(ctx.destination);
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      masterGain.connect(analyser);
       initWorklet();
     }
     if(ctx.state==='suspended') ctx.resume();
@@ -593,6 +694,12 @@ registerProcessor('cdj-engine', CDJEngine);
   // ---------- file loading ----------
   fileInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
+    if(!file) return;
+    if(isPlaying && buffer){
+      if(!confirm('Track speelt nu af. Wil je wisselen?')){ fileInput.value=''; return; }
+      pausePlayback();
+    }
+    if(buffer && currentTrackId) await saveTrackData();
     fileInput.value = '';           // zodat hetzelfde bestand opnieuw geladen kan worden
     if(!file) return;
     ensureCtx();
@@ -605,6 +712,9 @@ registerProcessor('cdj-engine', CDJEngine);
       trackSub.textContent = 'kon "'+file.name+'" niet decoderen — probeer mp3, m4a of wav (ogg/opus werkt niet op iPhone)';
       return;
     }
+    currentTrackId = trackHash(file);
+    const had = await loadTrackData(currentTrackId);
+    if(!had) bpmDetected = false; // nieuwe track: opnieuw analyseren
     loopActive = false; loopBtn.classList.remove('active');
     sendTrackToWorklet();
     stopPlayback();
@@ -613,15 +723,27 @@ registerProcessor('cdj-engine', CDJEngine);
     cueHint.textContent = 'geen cue-punt';
     trackSub.textContent = 'analyseren...';
     emptyHint.style.display = 'none';
-    await new Promise(r=>setTimeout(r,30)); // laat UI even ademen
-    analyzeTrack();
+    await new Promise(r=>setTimeout(r,30));
+    const eLowArr = computeWaveformData();
+    if(!had) detectBPM(eLowArr);
     updateBpmReadout();
+
+    // VU-meter
+    if(analyser && isPlaying){
+      const arr = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(arr);
+      let mx = 0;
+      for(let i=0;i<arr.length;i++) if(arr[i]>mx) mx=arr[i];
+      const pct = (mx/255)*100;
+      const fill = document.getElementById('vuFill');
+      if(fill) fill.style.width = pct+'%';
+    }
     trackSub.textContent = buffer.duration.toFixed(1)+'s · '+buffer.sampleRate+'Hz · '
-      + (bpmDetected ? trackBPM.toFixed(1)+' BPM (auto)' : 'BPM niet gevonden — tik op BPM');
+      + (bpmDetected ? trackBPM.toFixed(1)+' BPM' : 'BPM — tik om in te stellen');
     drawWave();
   });
 
-  function analyzeTrack(){
+  function computeWaveformData(){
     const ch0 = buffer.getChannelData(0);
     const ch1 = buffer.numberOfChannels>1 ? buffer.getChannelData(1) : null;
     const sr = buffer.sampleRate;
@@ -671,8 +793,7 @@ registerProcessor('cdj-engine', CDJEngine);
       bucketG[b] = Math.round(wL*110 + wM*138 + wH*239);
       bucketB[b] = Math.round(wL*255 + wM*61  + wH*243);
     }
-
-    detectBPM(eLowArr);
+    return eLowArr;
   }
 
   function detectBPM(env){
@@ -886,12 +1007,36 @@ registerProcessor('cdj-engine', CDJEngine);
   cueBtn.addEventListener('pointerup', cueRelease);
   cueBtn.addEventListener('pointercancel', cueRelease);
 
+  // ---------- Filter (low-pass / high-pass) ----------
+  const filterSlider = $('filterSlider'), filterVal = $('filterVal');
+  filterSlider.addEventListener('input', ()=>{
+    filterValue = parseFloat(filterSlider.value);
+    if(!filterNode) return;
+    const val = Math.abs(filterValue);
+    const freq = 20 + val*val*1.5;
+    filterNode.frequency.value = freq;
+    if(filterValue > 5) filterVal.textContent = 'LP '+Math.round(freq)+'Hz';
+    else if(filterValue < -5) filterVal.textContent = 'HP '+Math.round(freq)+'Hz';
+    else filterVal.textContent = 'OFF';
+  });
+
   // ---------- BPM / tempo ----------
   bpmNum.addEventListener('click', () => {
     const val = prompt('Basis-BPM van deze track:', trackBPM.toFixed(2));
     if(val && !isNaN(parseFloat(val))){
       trackBPM = Math.max(20, Math.min(300, parseFloat(val)));
       updateBpmReadout();
+
+    // VU-meter
+    if(analyser && isPlaying){
+      const arr = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(arr);
+      let mx = 0;
+      for(let i=0;i<arr.length;i++) if(arr[i]>mx) mx=arr[i];
+      const pct = (mx/255)*100;
+      const fill = document.getElementById('vuFill');
+      if(fill) fill.style.width = pct+'%';
+    }
     }
   });
 
@@ -928,6 +1073,17 @@ registerProcessor('cdj-engine', CDJEngine);
     tempoVal.textContent = sign+baseRatePercent.toFixed(1)+'%';
     applyRateLive();
     updateBpmReadout();
+
+    // VU-meter
+    if(analyser && isPlaying){
+      const arr = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(arr);
+      let mx = 0;
+      for(let i=0;i<arr.length;i++) if(arr[i]>mx) mx=arr[i];
+      const pct = (mx/255)*100;
+      const fill = document.getElementById('vuFill');
+      if(fill) fill.style.width = pct+'%';
+    }
   }
 
   // ---------- nudge (buttons) ----------
@@ -975,6 +1131,17 @@ registerProcessor('cdj-engine', CDJEngine);
       drawWave();
     }
     updateBpmReadout();
+
+    // VU-meter
+    if(analyser && isPlaying){
+      const arr = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(arr);
+      let mx = 0;
+      for(let i=0;i<arr.length;i++) if(arr[i]>mx) mx=arr[i];
+      const pct = (mx/255)*100;
+      const fill = document.getElementById('vuFill');
+      if(fill) fill.style.width = pct+'%';
+    }
   });
   function endDrag(){ dragging = false; }
   jogEl.addEventListener('pointerup', endDrag);
@@ -1001,6 +1168,30 @@ registerProcessor('cdj-engine', CDJEngine);
   function endWaveDrag(){ waveDragging = false; }
   waveCanvas.addEventListener('pointerup', endWaveDrag);
   waveCanvas.addEventListener('pointercancel', endWaveDrag);
+
+  // ---------- overzicht-waveform: needle search (alleen in pauze) ----------
+  let ovDragging = false;
+  overviewCanvas.style.touchAction = 'none';
+  function seekFromOverviewEvent(e){
+    const r = overviewCanvas.getBoundingClientRect();
+    const frac = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    startOffset = frac * buffer.duration;
+    curTimeEl.textContent = fmtTime(startOffset);
+    drawWave();
+  }
+  overviewCanvas.addEventListener('pointerdown', (e)=>{
+    if(!buffer || isPlaying) return; // track alleen verplaatsen in pauze
+    ovDragging = true;
+    try{ overviewCanvas.setPointerCapture(e.pointerId); }catch(err){}
+    seekFromOverviewEvent(e);
+  });
+  overviewCanvas.addEventListener('pointermove', (e)=>{
+    if(!ovDragging) return;
+    seekFromOverviewEvent(e);
+  });
+  function endOvDrag(){ ovDragging = false; }
+  overviewCanvas.addEventListener('pointerup', endOvDrag);
+  overviewCanvas.addEventListener('pointercancel', endOvDrag);
 
   // ---------- keylock ----------
   const keylockBtn = $('keylockBtn');
@@ -1089,6 +1280,17 @@ registerProcessor('cdj-engine', CDJEngine);
         }
         bpmDetected = true;
         updateBpmReadout();
+
+    // VU-meter
+    if(analyser && isPlaying){
+      const arr = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(arr);
+      let mx = 0;
+      for(let i=0;i<arr.length;i++) if(arr[i]>mx) mx=arr[i];
+      const pct = (mx/255)*100;
+      const fill = document.getElementById('vuFill');
+      if(fill) fill.style.width = pct+'%';
+    }
         drawWave();
       }
     }
@@ -1128,6 +1330,9 @@ registerProcessor('cdj-engine', CDJEngine);
     const dpr = window.devicePixelRatio||1;
     const w = waveCanvas.clientWidth, h = waveCanvas.clientHeight;
     waveCanvas.width = w*dpr; waveCanvas.height = h*dpr;
+    const ow = overviewCanvas.clientWidth, oh = overviewCanvas.clientHeight;
+    overviewCanvas.width = ow*dpr; overviewCanvas.height = oh*dpr;
+    octx.setTransform(dpr,0,0,dpr,0,0);
     wctx.setTransform(dpr,0,0,dpr,0,0);
   }
   window.addEventListener('resize', resizeCanvas);
@@ -1166,6 +1371,9 @@ registerProcessor('cdj-engine', CDJEngine);
 
   // ---------- PWA: offline cache (alleen actief als de app gehost wordt) ----------
   if('serviceWorker' in navigator && location.protocol.indexOf('http')===0){
+    // eerste installatie heeft nog geen controller -> alleen ECHTE updates
+    // (waar er al een controller was) mogen straks een reload triggeren
+    const hadControllerAtStart = !!navigator.serviceWorker.controller;
     window.addEventListener('load', ()=>{
       navigator.serviceWorker.register('./sw.js').then(reg=>{
         reg.update();
@@ -1175,19 +1383,54 @@ registerProcessor('cdj-engine', CDJEngine);
         });
       }).catch(()=>{});
       // nieuwe versie actief geworden -> één keer automatisch herladen
+      // (nooit bij de allereerste installatie, anders herlaadt de app zichzelf
+      //  binnen de eerste seconde en kan dat een track-load onderbreken)
       let reloaded = false;
       navigator.serviceWorker.addEventListener('controllerchange', ()=>{
-        if(reloaded) return; reloaded = true;
+        if(reloaded || !hadControllerAtStart) return;
+        reloaded = true;
         if(!isPlaying) location.reload(); // nooit midden in een draaiende track
       });
     });
   }
 
+
   resizeCanvas();
+
+  function drawOverview(){
+    const w = overviewCanvas.clientWidth, h = overviewCanvas.clientHeight;
+    octx.clearRect(0,0,w,h);
+    if(!peaksMin || !buffer) return;
+    const mid = h/2;
+    const step = Math.max(1, Math.floor(peaksMin.length / w));
+    for(let x=0; x<w; x++){
+      const bStart = x*step, bEnd = Math.min(peaksMin.length, bStart+step);
+      let mn=1, mx=-1;
+      for(let b=bStart;b<bEnd;b++){ if(peaksMin[b]<mn) mn=peaksMin[b]; if(peaksMax[b]>mx) mx=peaksMax[b]; }
+      if(mx<mn) continue;
+      octx.fillStyle = 'rgba(139,142,153,0.55)';
+      octx.fillRect(x, mid - mx*(mid-2), 1, Math.max(1,(mx-mn)*(mid-2)));
+    }
+    // actieve loop
+    if(loopActive){
+      const x1 = (loopStartT/buffer.duration)*w, x2 = (loopEndT/buffer.duration)*w;
+      octx.fillStyle = 'rgba(47,230,194,0.25)';
+      octx.fillRect(x1, 0, Math.max(1,x2-x1), h);
+    }
+    // cue-punt
+    const cx = (cuePoint/buffer.duration)*w;
+    octx.fillStyle = 'var(--amber)'; octx.fillStyle = '#ff8a3d';
+    octx.fillRect(cx, 0, 2, h);
+    // playhead
+    const px = (currentPosition()/buffer.duration)*w;
+    octx.fillStyle = '#ffffff';
+    octx.fillRect(px-1, 0, 2, h);
+  }
 
   function drawWave(){
     const w = waveCanvas.clientWidth, h = waveCanvas.clientHeight;
     wctx.clearRect(0,0,w,h);
+    drawOverview();
     if(!peaksMin){ return; }
     const pos = currentPosition();
     const visibleSeconds = 6;
@@ -1257,6 +1500,17 @@ registerProcessor('cdj-engine', CDJEngine);
     }
 
     updateBpmReadout();
+
+    // VU-meter
+    if(analyser && isPlaying){
+      const arr = new Uint8Array(analyser.frequencyBinCount);
+      analyser.getByteFrequencyData(arr);
+      let mx = 0;
+      for(let i=0;i<arr.length;i++) if(arr[i]>mx) mx=arr[i];
+      const pct = (mx/255)*100;
+      const fill = document.getElementById('vuFill');
+      if(fill) fill.style.width = pct+'%';
+    }
 
     // jog visual auto-rotation while playing (independent of drag delta already applied)
     if(isPlaying && !dragging){
