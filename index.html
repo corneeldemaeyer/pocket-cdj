@@ -81,8 +81,8 @@ body{
   position:relative; padding:10px 0 4px; border-bottom:1px solid var(--line);
   background:linear-gradient(180deg,#141519,#181A20);
 }
-#waveCanvas{ display:block; width:100%; height:110px; }
-.overview-wave{ display:block; width:100%; height:34px; touch-action:none; border-top:1px solid var(--line); }
+#waveCanvas{ display:block; width:100%; height:100px; }
+.overview-wave{ display:block; width:100%; height:26px; touch-action:none; border-top:1px solid var(--line); }
 .playhead-line{
   position:absolute; top:6px; bottom:22px; left:50%; width:2px;
   background:var(--amber); box-shadow:0 0 8px var(--amber);
@@ -101,11 +101,11 @@ body{
 /* ---------- BPM READOUT ---------- */
 .bpm-row{
   display:flex; align-items:center; justify-content:space-between;
-  padding:14px 16px 6px;
+  padding:14px 16px 8px;
 }
 .bpm-readout{ display:flex; align-items:baseline; }
 .bpm-readout > * + *{ margin-left:6px; }
-.bpm-num{ font-size:36px; font-weight:700; color:var(--teal); letter-spacing:1px; line-height:1; }
+.bpm-num{ font-size:38px; font-weight:700; color:var(--teal); letter-spacing:0.5px; line-height:1; }
 .bpm-label{ font-size:11px; color:var(--text-dim); letter-spacing:2px; font-weight:600; }
 .range-toggle{ display:flex; }
 .range-toggle > * + *{ margin-left:4px; }
@@ -121,56 +121,38 @@ body{
 /* ---------- JOG ---------- */
 .jog-area{
   display:flex; align-items:center; justify-content:center;
-  padding:8px 6px 14px;
+  padding:8px 10px 14px;
 }
-.jog-area > * + *{ margin-left:8px; }
+.jog-area > * + *{ margin-left:14px; }
 .nudge-btn{
-  width:34px; height:80px; border-radius:10px; flex-shrink:0; /* vaste maat, werkt op elke browser */
+  width:44px; height:100px; border-radius:10px; flex-shrink:0; /* vaste maat, werkt op elke browser */
   background:var(--panel-3); border:1px solid var(--line); color:var(--text-dim);
-  font-size:18px; display:flex; align-items:center; justify-content:center;
+  font-size:20px; display:flex; align-items:center; justify-content:center;
   user-select:none; cursor:pointer;
 }
 .nudge-btn:active, .nudge-btn.pressed{ background:var(--teal-dim); border-color:var(--teal); color:var(--teal); }
 
 .jog{
-  position:relative; width:160px; height:160px; border-radius:50%; flex-shrink:0; /* vaste maat, werkt op elke browser */
-  background:
-    radial-gradient(circle at 50% 42%, #33363f 0%, #23252c 55%, #191a1f 100%);
-  border:1px solid var(--line);
-  box-shadow: inset 0 0 0 8px #14151a, inset 0 0 30px rgba(0,0,0,.6), 0 6px 18px rgba(0,0,0,.5);
-  touch-action:none; cursor:grab;
-  overflow:hidden; /* voorkomt dat een kind-element (marker) ooit buiten de cirkel kan uitsteken */
-}
-.jog-ring{
-  position:absolute; top:8px; right:8px; bottom:8px; left:8px; border-radius:50%;
-  border:1px dashed #40434f;
-}
-.jog-marker{
-  position:absolute; top:12px; left:50%; width:3px; height:22px;
-  background:var(--teal); border-radius:2px; transform-origin:50% 68px;
-  box-shadow:0 0 6px var(--teal);
-}
-.jog-center{
-  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
-  width:54px; height:54px; border-radius:50%;
-  background:var(--panel); border:1px solid var(--line);
+  width:170px; height:170px; border-radius:50%; flex-shrink:0; /* vaste maat, geen enkel kind-element met eigen positie */
+  background:#23252c;
+  border:2px solid var(--line);
   display:flex; align-items:center; justify-content:center;
-  flex-direction:column; pointer-events:none;
+  touch-action:none; cursor:grab;
 }
-.jog-center .lbl{ font-size:9px; letter-spacing:2px; color:var(--text-dim); font-weight:700; }
-.jog.playing .jog-center{ border-color:var(--amber); }
-.jog.playing .jog-ring{ border-color:var(--amber); opacity:.6; }
+.jog .lbl{ font-size:12px; letter-spacing:2px; color:var(--text-dim); font-weight:700; }
+.jog.playing{ border-color:var(--amber); }
+.jog.playing .lbl{ color:var(--amber); }
 
 /* ---------- TRANSPORT ---------- */
 .transport{
   display:flex; align-items:center; justify-content:center;
-  padding:6px 16px 18px;
+  padding:6px 16px 16px;
 }
 .loop-row{ display:flex; padding:10px 16px 0; }
 .loop-row > * + *{ margin-left:8px; }
 .lbtn{
   border:none; border-radius:8px; font-family:'Inter',sans-serif; font-weight:700;
-  font-size:11px; letter-spacing:1px; cursor:pointer; padding:11px 0;
+  font-size:12px; letter-spacing:0.5px; cursor:pointer; padding:13px 0;
   background:var(--panel-3); color:var(--text); border:1px solid var(--line);
   flex:1; touch-action:manipulation;
 }
@@ -179,8 +161,8 @@ body{
 .lbtn.tap:active{ background:var(--amber); color:#221304; }
 .ver-badge{ font-size:9px; color:var(--text-dim); border:1px solid var(--line); border-radius:4px; padding:1px 5px; margin-left:6px; }
 .tbtn{
-  border:none; border-radius:8px; font-family:'Inter',sans-serif; font-weight:700;
-  font-size:12px; letter-spacing:1px; cursor:pointer; padding:14px 22px;
+  border:none; border-radius:9px; font-family:'Inter',sans-serif; font-weight:700;
+  font-size:14px; letter-spacing:0.5px; cursor:pointer; padding:16px 22px;
   display:flex; align-items:center;
 }
 .tbtn > * + *{ margin-left:8px; }
@@ -190,7 +172,7 @@ body{
 .tbtn.play.is-playing{ background:var(--panel-3); color:var(--amber); border:1px solid var(--amber); }
 
 /* ---------- TEMPO ---------- */
-.section{ padding:14px 16px; border-top:1px solid var(--line); }
+.section{ padding:10px 14px; border-top:1px solid var(--line); }
 .section-head{
   display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;
 }
@@ -210,32 +192,29 @@ body{
 .tempo-reset{
   margin-top:8px; width:100%; background:var(--panel-3); border:1px solid var(--line);
   color:var(--text-dim); font-size:10px; letter-spacing:1px; font-weight:700;
-  padding:7px; border-radius:5px; cursor:pointer;
+  padding:9px 10px; border-radius:6px; cursor:pointer; font-size:12px;
 }
 
 /* ---------- EQ ---------- */
-.eq-row{ display:flex; justify-content:space-around; align-items:flex-end; padding-top:4px;}
-.eq-band{ display:flex; flex-direction:column; align-items:center; }
-.eq-band > * + *{ margin-top:8px; }
-.eq-val{ font-size:11px; color:var(--text-dim); width:44px; text-align:center; }
-/* verticale sliders: iOS Safari kent geen slider-vertical/writing-mode op range,
-   dus we roteren een horizontale slider — werkt overal */
-.eq-slider-wrap{ height:130px; width:36px; display:flex; align-items:center; justify-content:center; }
+.eq-row{ display:flex; flex-direction:column; }
+.eq-row > * + *{ margin-top:10px; }
+.eq-band{ display:flex; align-items:center; }
+.eq-band > * + *{ margin-left:10px; }
+.eq-val{ font-size:11px; color:var(--text-dim); width:44px; text-align:right; flex-shrink:0; }
 .eq-slider{
   -webkit-appearance:none; appearance:none;
-  width:120px; height:6px; border-radius:3px; background:var(--panel-3); outline:none;
-  transform:rotate(-90deg); transform-origin:center;
+  flex:1; height:6px; border-radius:3px; background:var(--panel-3); outline:none;
   touch-action:none;
 }
 .eq-slider::-webkit-slider-thumb{
-  -webkit-appearance:none; width:24px; height:14px; border-radius:4px; cursor:pointer;
+  -webkit-appearance:none; width:22px; height:22px; border-radius:50%; cursor:pointer;
 }
 .eq-band[data-band="low"] .eq-slider::-webkit-slider-thumb{ background:var(--amber); }
 .eq-band[data-band="mid"] .eq-slider::-webkit-slider-thumb{ background:#d7dae2; }
 .eq-band[data-band="high"] .eq-slider::-webkit-slider-thumb{ background:var(--teal); }
-.eq-label{ font-size:10px; letter-spacing:1.5px; font-weight:700; color:var(--text-dim); }
+.eq-label{ font-size:10px; letter-spacing:1.5px; font-weight:700; color:var(--text-dim); width:36px; flex-shrink:0; }
 
-.master-row{ display:flex; align-items:center; margin-top:16px; }
+.master-row{ display:flex; align-items:center; margin-top:12px; }
 .master-row > * + *{ margin-left:12px; }
 .master-row .lbl{ font-size:10px; letter-spacing:1.5px; font-weight:700; color:var(--text-dim); width:52px;}
 .master-slider{ -webkit-appearance:none; flex:1; height:4px; border-radius:2px; background:var(--panel-3); outline:none;}
@@ -251,7 +230,7 @@ input[type=range]::-moz-range-thumb{ border:none; }
   .transport-info{ padding:2px 12px 6px; }
   .bpm-row{ padding-left:12px; padding-right:12px; }
   .bpm-num{ font-size:28px; }
-  .ver-badge{ display:none; }
+  .ver-badge{ font-size:8px; padding:1px 3px; }
   .range-btn{ padding:6px 6px; font-size:10px; }
     .loop-row{ padding:8px 12px 0; }
     .loop-row > * + *{ margin-left:6px; }
@@ -293,7 +272,7 @@ input[type=range]::-moz-range-thumb{ border:none; }
     <div class="bpm-readout">
       <span class="bpm-num mono" id="bpmNum">120.00</span>
       <span class="bpm-label">BPM</span>
-      <span class="ver-badge" id="verBadge">v17</span>
+      <span class="ver-badge" id="verBadge">v26</span>
     </div>
     <div class="range-toggle" id="rangeToggle">
       <button class="range-btn" data-range="8">±8%</button>
@@ -304,11 +283,7 @@ input[type=range]::-moz-range-thumb{ border:none; }
 
   <div class="jog-area">
     <div class="nudge-btn" id="nudgeLeft">−</div>
-    <div class="jog" id="jog">
-      <div class="jog-ring"></div>
-      <div class="jog-marker" id="jogMarker"></div>
-      <div class="jog-center"><div class="lbl">JOG</div></div>
-    </div>
+    <div class="jog" id="jog"><div class="lbl" id="jogLbl">JOG</div></div>
     <div class="nudge-btn" id="nudgeRight">+</div>
   </div>
 
@@ -340,19 +315,19 @@ input[type=range]::-moz-range-thumb{ border:none; }
     <div class="section-head"><span class="t">EQ (3-BAND)</span><span class="v mono" id="eqSummary"></span></div>
     <div class="eq-row">
       <div class="eq-band" data-band="low">
-        <div class="eq-val mono" id="lowVal">0 dB</div>
-        <div class="eq-slider-wrap"><input type="range" class="eq-slider" id="lowSlider" min="-24" max="12" step="1" value="0"></div>
         <div class="eq-label">LOW</div>
+        <input type="range" class="eq-slider" id="lowSlider" min="-24" max="12" step="1" value="0">
+        <div class="eq-val mono" id="lowVal">0 dB</div>
       </div>
       <div class="eq-band" data-band="mid">
-        <div class="eq-val mono" id="midVal">0 dB</div>
-        <div class="eq-slider-wrap"><input type="range" class="eq-slider" id="midSlider" min="-24" max="12" step="1" value="0"></div>
         <div class="eq-label">MID</div>
+        <input type="range" class="eq-slider" id="midSlider" min="-24" max="12" step="1" value="0">
+        <div class="eq-val mono" id="midVal">0 dB</div>
       </div>
       <div class="eq-band" data-band="high">
-        <div class="eq-val mono" id="highVal">0 dB</div>
-        <div class="eq-slider-wrap"><input type="range" class="eq-slider" id="highSlider" min="-24" max="12" step="1" value="0"></div>
         <div class="eq-label">HIGH</div>
+        <input type="range" class="eq-slider" id="highSlider" min="-24" max="12" step="1" value="0">
+        <div class="eq-val mono" id="highVal">0 dB</div>
       </div>
     </div>
     <div class="master-row">
@@ -368,6 +343,20 @@ input[type=range]::-moz-range-thumb{ border:none; }
 </div>
 
 <script>
+// Vangnet: elke onverwachte fout ergens in de app wordt zichtbaar getoond
+// bovenaan het scherm, in plaats van dat de app stil vastloopt zonder uitleg.
+window.addEventListener('error', function(e){
+  try{
+    let box = document.getElementById('fatalErrBox');
+    if(!box){
+      box = document.createElement('div');
+      box.id = 'fatalErrBox';
+      box.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#4a1010;color:#ff8a8a;font-family:monospace;font-size:11px;padding:8px 10px;z-index:99998;white-space:pre-wrap;border-bottom:2px solid #ff4757;';
+      document.body.insertBefore(box, document.body.firstChild);
+    }
+    box.textContent = 'JS-fout: ' + e.message + ' (regel ' + e.lineno + ')';
+  }catch(err){}
+});
 (() => {
   // ---------- state ----------
   let ctx = null;
@@ -473,7 +462,6 @@ input[type=range]::-moz-range-thumb{ border:none; }
   const bpmNum = $('bpmNum');
   const rangeToggle = $('rangeToggle');
   const jogEl = $('jog');
-  const jogMarker = $('jogMarker');
   const nudgeLeft = $('nudgeLeft');
   const nudgeRight = $('nudgeRight');
   const playBtn = $('playBtn');
@@ -696,7 +684,7 @@ registerProcessor('cdj-engine', CDJEngine);
     if(!file) return;
     ensureCtx();
     trackTitle.textContent = file.name;
-    trackSub.textContent = 'decoderen...';
+    trackSub.textContent = 'decoderen... (' + (file.size/1024/1024).toFixed(1) + ' MB)';
     const arrayBuf = await file.arrayBuffer();
     try{
       buffer = await ctx.decodeAudioData(arrayBuf);
@@ -705,10 +693,11 @@ registerProcessor('cdj-engine', CDJEngine);
       return;
     }
     currentTrackId = trackHash(file);
-    const had = await loadTrackData(currentTrackId);
+    let had = false;
+    try{ had = await loadTrackData(currentTrackId); }catch(err){ had = false; }
     if(!had) bpmDetected = false; // nieuwe track: opnieuw analyseren
     loopActive = false; loopBtn.classList.remove('active');
-    sendTrackToWorklet();
+    try{ sendTrackToWorklet(); }catch(err){ /* worklet niet beschikbaar: buffer-engine vangt dit op */ }
     stopPlayback();
     startOffset = 0; cuePoint = 0;
     totTimeEl.textContent = fmtTime(buffer.duration);
@@ -716,23 +705,22 @@ registerProcessor('cdj-engine', CDJEngine);
     trackSub.textContent = 'analyseren...';
     emptyHint.style.display = 'none';
     await new Promise(r=>setTimeout(r,30));
-    const eLowArr = computeWaveformData();
-    if(!had) detectBPM(eLowArr);
+    try{
+      const eLowArr = computeWaveformData();
+      if(!had) detectBPM(eLowArr);
+    }catch(err){
+      trackSub.textContent = 'FOUT bij analyseren: ' + (err && err.message ? err.message : err);
+      return;
+    }
     updateBpmReadout();
 
-    // VU-meter
-    if(analyser && isPlaying){
-      const arr = new Uint8Array(analyser.frequencyBinCount);
-      analyser.getByteFrequencyData(arr);
-      let mx = 0;
-      for(let i=0;i<arr.length;i++) if(arr[i]>mx) mx=arr[i];
-      const pct = (mx/255)*100;
-      const fill = document.getElementById('vuFill');
-      if(fill) fill.style.width = pct+'%';
-    }
     trackSub.textContent = buffer.duration.toFixed(1)+'s · '+buffer.sampleRate+'Hz · '
       + (bpmDetected ? trackBPM.toFixed(1)+' BPM' : 'BPM — tik om in te stellen');
-    drawWave();
+    try{
+      drawWave();
+    }catch(err){
+      trackSub.textContent += ' (waveform-fout: ' + (err && err.message ? err.message : err) + ')';
+    }
   });
 
   function computeWaveformData(){
@@ -907,6 +895,7 @@ registerProcessor('cdj-engine', CDJEngine);
     if(!buffer) return;
     ensureCtx();
     if(ctx.state==='suspended') ctx.resume();
+    unlockAudio(); // opnieuw proberen bij elke play — de eerste poging kan falen
     killSources();
     startOffset = Math.max(0, Math.min(buffer.duration-0.001, fromOffset));
     setPlayingUI(true);
@@ -1315,13 +1304,17 @@ registerProcessor('cdj-engine', CDJEngine);
 
   // ---------- waveform drawing ----------
   function resizeCanvas(){
-    const dpr = window.devicePixelRatio||1;
-    const w = waveCanvas.clientWidth, h = waveCanvas.clientHeight;
-    waveCanvas.width = w*dpr; waveCanvas.height = h*dpr;
-    const ow = overviewCanvas.clientWidth, oh = overviewCanvas.clientHeight;
-    overviewCanvas.width = ow*dpr; overviewCanvas.height = oh*dpr;
-    octx.setTransform(dpr,0,0,dpr,0,0);
-    wctx.setTransform(dpr,0,0,dpr,0,0);
+    try{
+      const dpr = window.devicePixelRatio||1;
+      const w = waveCanvas.clientWidth, h = waveCanvas.clientHeight;
+      waveCanvas.width = w*dpr; waveCanvas.height = h*dpr;
+      const ow = overviewCanvas.clientWidth, oh = overviewCanvas.clientHeight;
+      overviewCanvas.width = ow*dpr; overviewCanvas.height = oh*dpr;
+      octx.setTransform(dpr,0,0,dpr,0,0);
+      wctx.setTransform(dpr,0,0,dpr,0,0);
+    }catch(err){
+      if(trackSub) trackSub.textContent = 'FOUT bij canvas-resize: ' + (err && err.message ? err.message : err);
+    }
   }
   window.addEventListener('resize', resizeCanvas);
   // ---------- iOS audio unlock ----------
@@ -1501,6 +1494,16 @@ registerProcessor('cdj-engine', CDJEngine);
   // ---------- main loop ----------
   let lastFrame = performance.now();
   function loop(now){
+    try{
+      loopBody(now);
+    }catch(err){
+      // een fout in de tekenloop mag de app nooit volledig laten vastlopen —
+      // toon 'm zichtbaar zodat we op afstand kunnen debuggen
+      if(trackSub) trackSub.textContent = 'FOUT in tekenloop: ' + (err && err.message ? err.message : err);
+    }
+    requestAnimationFrame(loop);
+  }
+  function loopBody(now){
     const dt = (now-lastFrame)/1000;
     lastFrame = now;
 
@@ -1532,12 +1535,12 @@ registerProcessor('cdj-engine', CDJEngine);
       if(fill) fill.style.width = pct+'%';
     }
 
-    // jog visual auto-rotation while playing (independent of drag delta already applied)
+    // jog visual auto-rotation while playing (bijgehouden voor eventueel later gebruik,
+    // maar er is geen roterend element meer om te tonen op deze vereenvoudigde build)
     if(isPlaying && !dragging){
       const bpmNowVal = trackBPM*currentEffectiveRate();
-      jogRotation += (bpmNowVal/60)*180*dt; // half rotation per beat, purely visual
+      jogRotation += (bpmNowVal/60)*180*dt;
     }
-    jogMarker.style.transform = 'rotate('+jogRotation+'deg)';
 
     if(buffer){
       loopWatchdog();
@@ -1546,8 +1549,6 @@ registerProcessor('cdj-engine', CDJEngine);
       drawWave();
       if(isPlaying && !loopActive && pos>=buffer.duration){ stopPlayback(); startOffset=buffer.duration; }
     }
-
-    requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
 
